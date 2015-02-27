@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<CodeBlocks_project_file>
+	<FileVersion major="1" minor="6" />
+	<Project>
+		<Option title="fepp" />
+		<Option pch_mode="2" />
+		<Option compiler="gcc" />
+		<Build>
+			<Target title="Debug">
+				<Option output="bin/Debug/zimodels" prefix_auto="1" extension_auto="1" />
+				<Option object_output="obj/Debug/" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Option parameters="1 /home/martin XOM ISE" />
+				<Option projectLinkerOptionsRelation="2" />
+				<Option projectIncludeDirsRelation="2" />
+				<Option projectLibDirsRelation="2" />
+				<Compiler>
+					<Add option="-g" />
+					<Add directory="/home/martin/Work/fepp/" />
+					<Add directory="/user/local/include/" />
+					<Add directory="/usr/local/boost_1_57_0/" />
+					<Add directory="/home/martin/Work/fepp/nlopt.inc" />
+				</Compiler>
+				<Linker>
+					<Add library="libnlopt.a" />
+					<Add directory="/usr/local/lib" />
+				</Linker>
+			</Target>
+		</Build>
+		<Compiler>
+			<Add option="-Wall" />
+			<Add option="-fexceptions" />
+		</Compiler>
+		<Unit filename="nlopt/plis.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="src/analysis.cpp" />
+		<Unit filename="src/csvinterval.cpp" />
+		<Unit filename="src/data.cpp" />
+		<Unit filename="src/hfd.cpp" />
+		<Unit filename="src/importer09.cpp" />
+		<Unit filename="src/interval.cpp" />
+		<Unit filename="src/program.cpp" />
+		<Unit filename="src/tbtexporter.cpp" />
+		<Unit filename="src/tickdata09importer.cpp" />
+		<Unit filename="src/tickdataimporter.cpp" />
+		<Unit filename="zimodels.hpp" />
+		<Unit filename="zimodels/analysis.cpp" />
+		<Unit filename="zimodels/estimator.cpp" />
+		<Unit filename="zimodels/main.cpp" />
+		<Unit filename="zimodels/simulator.cpp" />
+		<Unit filename="zimodels/summary.cpp" />
+		<Extensions>
+			<code_completion />
+			<debugger />
+		</Extensions>
+	</Project>
+</CodeBlocks_project_file>

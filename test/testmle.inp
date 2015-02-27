@@ -1,0 +1,11 @@
+open /home/martin/Dropbox/Work/epp/src/mlesample.csv
+scalar V = 1
+scalar m = 1
+mle loglik = -log(2*3.1415)/2-log(V)/2-(m-X)^2/2/V
+    deriv V=-1.0/V/2+(m-X)^2/2/V^2
+    deriv m=-(m-X)/V
+end mle
+
+mle loglik = -log(2*3.1415)/2-log(V)/2-(m-X)^2/2/V
+    params V, m
+end mle
