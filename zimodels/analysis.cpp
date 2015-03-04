@@ -223,7 +223,9 @@ void zianalysis::evaluate(zimodel* modelused, const vector<paramresult>& res)
             double P1 = 1 - MAE / MAT;
             cout << "P1=" << P1 << " P2=" << P2 << endl;
             //latex << "$\\bar a=" << S/(double) nobs << "$," << endl;
-            latex << "$P_1 = " << P1 << "$, $P_2=" << P2 << "$\\\\" << endl;
+            latex << "$P_1 = " << P1 << "$";
+            if(extendedoutput)
+                latex << ", $P_2=" << P2 << "$";
         }
         catch(const runtime_error& e)
         {
@@ -283,6 +285,7 @@ void zianalysis::onendpair(smpair& togo)
                 {
                     sda += da;
                     nsda++;
+                    ajumps[sp++] = i;
                 }
                 if(r.s > 0)
                 {
@@ -290,7 +293,6 @@ void zianalysis::onendpair(smpair& togo)
                     nss++;
                 }
 
-                ajumps[sp++] = i;
                 if(r.a < mina)
                     mina = r.a;
                 if(r.a > maxa)
@@ -324,22 +326,25 @@ void zianalysis::onendpair(smpair& togo)
     }
 
     latex << "\\\\ \\smallskip" << endl;
-    latex << "$N/M/maxq=" << getN() << "/" << M
-          << "/" << maxqchanges << "$\\\\ \\smallskip" << endl;
+    if(extendedoutput)
+        latex << "$N/M/maxq=" << getN() << "/" << M
+          << "/" << maxqchanges << "$";
+    else
+        latex << "$N=" << getN() << "$" << endl;
+    latex << "\\\\ \\smallskip" << endl;
 
     csv << togo.stock << " at " << togo.market << endl;
 
-    if(!simulateby)
-    {
-        latex << "$\\overline{a^+}=" << (nsda ? sda / nsda : 0)
-              << "$, $\\overline q=" << (nss ? ss / nss : 0)
-              << "$\\\\ \\smallskip" << endl;
-    }
+    double avgdaplus = nsda ? sda / nsda : 0;
+    latex << "$\\overline{a}^+=" << avgdaplus
+          << "$, $\\overline q=" << (nss ? ss / nss : 0)
+          << "$\\\\ \\smallskip" << endl;
 
     vector<paramresult> result;
     double loglik = -HUGE_VAL;
     zimodel* modelused = 0;
     int nofmodelused = 0;
+    bool tailmodelused;
 
     cout << "Onlytrades = " << onlytrades << ", unitvolume = " << unitvolume
          << endl;
@@ -413,7 +418,8 @@ void zianalysis::onendpair(smpair& togo)
             string emsg;
             estimate(*model, r, true, failed, significant, ll, emsg);
 
-            latex << model->getname();
+            if(extendedoutput)
+                latex << model->getname();
             if(failed)
             {
                 latex << ": " << emsg << "\\\\" << endl;
@@ -423,10 +429,13 @@ void zianalysis::onendpair(smpair& togo)
             }
             else
             {
-                if(significant)
-                    latex << "$^\\star$" << endl;
-                latex << ": ";
-                evaluate(model,r);
+                if(extendedoutput)
+                {
+                    if(significant)
+                        latex << "$^\\star$" << endl;
+                    latex << ": ";
+                    evaluate(model,r);
+                }
             }
             double ratio = 2*(ll-loglik);
             cout << "ratio=" << ratio << endl;
@@ -451,6 +460,7 @@ void zianalysis::onendpair(smpair& togo)
                         delete modelused;
                     modelused = model;
                     nofmodelused = n;
+                    tailmodelused = n>1 ? true : false;
                 }
                 if(n==maxn)
                     break;
@@ -473,22 +483,44 @@ void zianalysis::onendpair(smpair& togo)
 
     if(modelused)
     {
+        if(!extendedoutput)
+        {
+            cout << "Evaluating..." << endl;
+            if(avgdaplus < 1.02 && !onlytrades)
+                latex << "$P_1=n/a$" << endl;
+            else
+                evaluate(modelused,result);
+            latex << "\\\\ \\smallskip" << endl;
+        }
         cout << "Writing latex..." << endl;
-
         latex << "\\smallskip " << endl;
-        latex << modelused->getname() << "\\\\" << endl;
+        if(extendedoutput)
+            latex << modelused->getname() << "\\\\" << endl;
 
         latex << "\\smallskip" << endl;
 
         for(unsigned int i=0; i< result.size(); i++)
         {
-            latex.precision(2);
+            latex.precision(4);
             result[i].output(latex,true);
             latex << ", ";
             //            if((i%2))
             latex << "\\\\" ;
         }
         latex << "\\smallskip" << endl;
+        if(tailmodelused) // i.e. the model is with tails
+        {
+            zinptmodel* m = (zinptmodel*) modelused;
+            double alphak = result[m->alphaphi()].value
+                              + result[m->alpharho()].value;
+            double s = sqrt(result[m->alphaphi()].std
+                              + result[m->alpharho()].std);
+            latex << "$\\alpha_{\\kappa}=" << alphak
+                  << "(" << s << ")^{"
+                  << paramresult::stars(alphak/s)
+                  << "}$\\\\"<< endl;
+            latex << "\\smallskip" << endl;
+        }
 
         delete modelused;
     }

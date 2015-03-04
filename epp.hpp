@@ -120,11 +120,11 @@ struct paramresult
 	paramresult(const paramresult& r) :
 	   info(r.info), value(r.value), std(r.std)
 	   {}
-    string stars() const
+    static string stars(double z)
     {
-        if(z()==na)
+        if(z==na)
             return "";
-        double q = fabs(z());
+        double q = fabs(z);
         if(q>3.090)
             return "***";
         if(q>2.326)
@@ -132,6 +132,10 @@ struct paramresult
         if(q>1.645)
             return "*";
         return "";
+    }
+    string stars() const
+    {
+        return stars(z());
     }
     void output(ostream& str, bool latex) const
     {

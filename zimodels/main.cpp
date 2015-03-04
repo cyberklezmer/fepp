@@ -56,14 +56,11 @@ int main(int argc, char ** argv)
             case 'E':
                 todo = 2;
                 break;
-            case '1':
+            case 'Z':
                 todo = 11;
                 break;
-            case '2':
+            case 'G':
                 todo = 12;
-                break;
-            case '3':
-                todo = 13;
                 break;
             case 'X':
                 todo = 20;
@@ -144,18 +141,29 @@ int main(int argc, char ** argv)
             pgm.process();
         }
         break;
-		case 20:
 		case 11:
         {
-            zinparmodel m(1,true,false,false,false);
-            vector<double> pars(3);
-            pars[0]=0.06;
-            pars[1]=0.14;
-            pars[2]=-1.64;
-            m.setinitparams(pars);
+            zianalysis e("zi");
+            e.modeltype = zianalysis::tail;
+            e.maxmletime = 600;
+            e.unitvolume = false;
+            e.includenu = false;
+            e.includegamma = false;
+            e.includezeta = false;
+            e.includeeta = false;
+            e.setsample(1000,false);
+            e.firstn = 1;
+            e.maxn = 2;
+            e.twodimestimation = true;
+            e.extendedlogging = false;
 
-            zianalysis e(todo == 20 ? "simulated" : "vssimulated");
-
+            program pgm(pairs,e,start,end);
+            pgm.process();
+            return 0;
+        }
+		case 12:
+		{
+            zianalysis e("g");
             e.modeltype = zianalysis::tail;
             e.maxmletime = 600;
             e.unitvolume = false;
@@ -166,31 +174,27 @@ int main(int argc, char ** argv)
             e.setsample(1000,true);
             e.firstn = 1;
             e.maxn = 2;
-            if(todo == 20)
-                e.simulateby = &m;
             e.twodimestimation = true;
-            e.extendedlogging = true;
+            e.extendedlogging = false;
 
             program pgm(pairs,e,start,end);
             pgm.process();
             return 0;
+		}
+        case 20:
+        {
+            zinparmodel m(1,true,false,false,false);
+            zianalysis e("zi");
+
+            vector<double> pars(3);
+            pars[0]=0.06;
+            pars[1]=0.14;
+            pars[2]=-1.64;
+            e.simulateby = &m;
+            m.setinitparams(pars);
+            return 0;
         }
 
-		case 12:
-		{
-            zianalysis e;
-            e.modeltype = zianalysis::individual;
-            e.maxmletime = 2000;
-            e.unitvolume = false;
-            e.includenu = false;
-            e.extendedlogging = false;
-            e.setsample(400,true);
-            e.firstn = 1;
-            e.maxn = 3;
-            e.twodimestimation = true;
-            program pgm(pairs,e,start,end);
-            pgm.process();
-		}
 		break;
 	}
 	cout << "Hotovo!" << endl;

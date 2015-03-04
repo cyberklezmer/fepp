@@ -8,7 +8,7 @@
 #include "zimodels.hpp"
 #include <boost/math/special_functions/gamma.hpp>
 
-int ziestimator::debug = 0;
+int aqestimator::debug = 0;
 
 
 void dumpparams(const vector<double>& params)
@@ -28,14 +28,14 @@ struct pairinfo
     pairinfo(): excludefor(0), dataextfactor(1) {}
 };
 
-ziestimator::ziestimator(zimodel& amodel, zianalysis& aanalysis) :
+aqestimator::aqestimator(zimodel& amodel, zianalysis& aanalysis) :
     model(amodel), analysis(aanalysis),
     snapshots(false), parameters(0)
 {
     resetsnaps();
 }
 
-bool ziestimator::issnap(int p, int i, int j)
+bool aqestimator::issnap(int p, int i, int j)
 {
 //cout << "issnap " << p << "," << i << "," << j << endl;
     if(!snapshots)
@@ -44,7 +44,7 @@ bool ziestimator::issnap(int p, int i, int j)
     return snaptimes[k] == analysis.getjumps(i)-j;
 }
 
-const ziestimator::hrec& ziestimator::getsnap(int p, int i, int j)
+const aqestimator::hrec& aqestimator::getsnap(int p, int i, int j)
 {
 //cout << "getsnap " << p << "," << i << "," << j << endl;
     if(!issnap(p,i,j))
@@ -55,8 +55,8 @@ const ziestimator::hrec& ziestimator::getsnap(int p, int i, int j)
     return snaps[k];
 }
 
-void ziestimator::setsnap(int p, int i, int j,
-                          const ziestimator::hrec& r )
+void aqestimator::setsnap(int p, int i, int j,
+                          const aqestimator::hrec& r )
 {
 //cout << "setsnap " << p << "," << i << "," << j << endl;
 //cout << "shaps.size()=" << snaps.size() << endl;
@@ -73,7 +73,7 @@ void ziestimator::setsnap(int p, int i, int j,
 //cout << "finished." << endl;
 }
 
-void ziestimator::resetsnaps()
+void aqestimator::resetsnaps()
 {
     unsigned int n = analysis.numprices();
     if(snaptimes.size() != n)
@@ -86,7 +86,7 @@ void ziestimator::resetsnaps()
 }
 
 
-void ziestimator::getomega
+void aqestimator::getomega
 (int i, int p,
  double& point,vector<double>& gpoint,
  double& bin,vector<double>& gbin,
@@ -157,7 +157,7 @@ void ziestimator::getomega
                 vector<double> gnu(q);
                 double nu=model.getnu(params,gnu);
                 vector<double> geta(q);
-                double eta=model.geteta(params,geta);
+                double eta = model.geteta(params,geta);
                 bin = A*nu;
                 gbin = A*gnu;
                 bip = eck * eta;
@@ -173,7 +173,7 @@ void ziestimator::getomega
 }
 
 
-double ziestimator::getomega(int i, int p, vector<double>& g)
+double aqestimator::getomega(int i, int p, vector<double>& g)
 {
     int q = params.size();
     double point;
@@ -194,8 +194,7 @@ double ziestimator::getomega(int i, int p, vector<double>& g)
 }
 
 
-double ziestimator::getlogdensity
-(int i, int a, vector<double>& grad)
+double aqestimator::getlogdensity(int i, int a, vector<double>& grad)
 {
     if(debug)
         cout << "getlogdensity(" << i << "," << a << ")"
@@ -256,33 +255,6 @@ double ziestimator::getlogdensity
 
         return  s + log(pr); // log(1.0-exp(-o));
     }
-    else if(model.isinspread() && a < last.a && a> last.b)
-    {
-        double ksum = 0;
-        vector<double> gsum(zero_vector(q));
-
-        double ka;
-        vector<double> ga(q);
-
-        for(int p=last.b+1; p<last.a; p++)
-        {
-            vector<double> g(q);
-
-            double k = model.getkappa(last.a, last.b, p, params, g);
-            if(p==a)
-            {
-                ka=k;
-                ga=g;
-            }
-
-            ksum += k;
-            gsum = gsum + g;
-        }
-
-        for(int j=0; j<q; j++)
-            grad[j] = ga[j] / ka - gsum[j] / ksum;
-        return log(ka) - log(ksum);
-    }
     else
     {
         grad = zero_vector(q);
@@ -291,7 +263,7 @@ double ziestimator::getlogdensity
 }
 
 
-void ziestimator::addpo(vector<double>& dist,
+void aqestimator::addpo(vector<double>& dist,
                         vector<vector<double> >& gdist,
                         double point, const vector<double>& gpoint)
 {
@@ -326,7 +298,7 @@ void ziestimator::addpo(vector<double>& dist,
 
 }
 
-void ziestimator::addbi(vector<double>& dist,
+void aqestimator::addbi(vector<double>& dist,
                         vector<vector<double> >& gdist,
                         int bin,
                         double bip, const vector<double>& gbip)
@@ -368,7 +340,7 @@ void ziestimator::addbi(vector<double>& dist,
         gdist[k] = gres[k];
 }
 
-double ziestimator::getlogdensity
+double aqestimator::getlogdensity
 (int i, int a, int m, int v, /*bool istrade,*/ vector<double>& grad)
 {
     if(debug)
@@ -532,33 +504,6 @@ double ziestimator::getlogdensity
             return log(prob);
         }
     }
-    else if(model.isinspread() && a < last.a && a> last.b)
-    {
-        double ksum = 0;
-        vector<double> gsum(zero_vector(q));
-
-        double ka;
-        vector<double> ga(q);
-
-        for(int p=last.b+1; p<last.a; p++)
-        {
-            vector<double> g(q);
-
-            double k = model.getkappa(last.a, last.b, p, params, g);
-            if(p==a)
-            {
-                ka=k;
-                ga=g;
-            }
-
-            ksum += k;
-            gsum = gsum + g;
-        }
-
-        for(int j=0; j<q; j++)
-            grad[j] = ga[j] / ka - gsum[j] / ksum;
-        return log(ka) - log(ksum);
-    }
     else
     {
         grad = zero_vector(q);
@@ -566,7 +511,7 @@ double ziestimator::getlogdensity
     }
 }
 
-double ziestimator::logdensity(int i, vector<double>& grad)
+double aqestimator::logdensity(int i, vector<double>& grad)
 {
     if(!params.size())
         throw runtime_error("params not set!");
@@ -581,7 +526,7 @@ double ziestimator::logdensity(int i, vector<double>& grad)
 
 
 
-int ziestimator::getsamplesize()
+int aqestimator::getsamplesize()
 {
     return analysis.getN();
 }
@@ -589,7 +534,7 @@ int ziestimator::getsamplesize()
 
 
 
-void ziestimator::testgrads(int start, int num)
+void aqestimator::testgrads(int start, int num)
 {
     try
     {

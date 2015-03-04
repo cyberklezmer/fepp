@@ -7,11 +7,11 @@
 		<Option compiler="gcc" />
 		<Build>
 			<Target title="Debug">
-				<Option output="bin/Debug/zimodels" prefix_auto="1" extension_auto="1" />
+				<Option output="bin/Debug/fepp" prefix_auto="1" extension_auto="1" />
 				<Option object_output="obj/Debug/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
-				<Option parameters="1 /home/martin XOM ISE" />
+				<Option parameters="G /home/martin XOM NSE" />
 				<Option projectLinkerOptionsRelation="2" />
 				<Option projectIncludeDirsRelation="2" />
 				<Option projectLibDirsRelation="2" />
@@ -32,6 +32,8 @@
 			<Add option="-Wall" />
 			<Add option="-fexceptions" />
 		</Compiler>
+		<Unit filename="epp.hpp" />
+		<Unit filename="hfd.hpp" />
 		<Unit filename="nlopt/plis.c">
 			<Option compilerVar="CC" />
 		</Unit>

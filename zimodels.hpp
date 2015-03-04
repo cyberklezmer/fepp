@@ -87,10 +87,7 @@ class zimodel
 protected:
     vector <paraminfo> params;
     vector<double> phoograd;
-    bool inspread;
 public:
-    bool isinspread()
-    { return inspread; }
     virtual string getname() = 0;
 
     virtual double getrho(int a, int b, int p,
@@ -193,8 +190,8 @@ public:
     }
 
     vector<paraminfo>& getparams() { return params; };
-    zimodel(int anumpars, bool ainspread = true)
-      : params(anumpars), phoograd(anumpars), inspread(ainspread)
+    zimodel(int anumpars)
+      : params(anumpars), phoograd(anumpars)
     {}
     virtual ~zimodel() {}
 };
@@ -269,9 +266,9 @@ protected:
     }
 
     ziextmodel(int anumpars, bool aisnu, bool aisgamma,
-              bool aiseta, bool aiszeta, bool ainspread = false)
+              bool aiseta, bool aiszeta)
       : zimodel(anumpars+(aisnu ? 1 : 0)+(aisgamma ? 1 : 0)
-                      +(aiseta ? 1 : 0) + (aiszeta ? 1 : 0), ainspread),
+                      +(aiseta ? 1 : 0) + (aiszeta ? 1 : 0)),
         isnu(aisnu), isgamma(aisgamma), iseta(aiseta), iszeta(aiszeta)
     {
         int i=anumpars;
@@ -308,7 +305,7 @@ protected:
     }
 };
 
-class ziestimator
+class aqestimator
 {
 public:
     static int debug;
@@ -347,7 +344,7 @@ private:
 public:
     double getomega(int i, int p, vector<double>& g);
 
-    ziestimator(zimodel& amodel, zianalysis& aanalysis);
+    aqestimator(zimodel& amodel, zianalysis& aanalysis);
     void setparameters(const vector<double>& p)
     {
         params = p;
@@ -389,6 +386,7 @@ public:
     bool unitvolume;
     bool twodimestimation;
     bool extendedlogging;
+    bool extendedoutput;
     bool includenu;
     bool includegamma;
     bool includeeta;
@@ -458,6 +456,7 @@ public:
 		  unitvolume(false),
 		  twodimestimation(true),
 		  extendedlogging(false),
+		  extendedoutput(false),
 		  includenu(false),
 		  includegamma(false),
 		  includeeta(false),
@@ -488,11 +487,11 @@ public:
 
 };
 
-class zimleestimator : public ziestimator, public mle
+class zimleestimator : public aqestimator, public mle
 {
 public:
     zimleestimator(zimodel& amodel, zianalysis& aanalysis) :
-       ziestimator(amodel,aanalysis),
+       aqestimator(amodel,aanalysis),
         mle(amodel.getparams())
        {}
 	virtual int getN() { return analysis.getN(); };
