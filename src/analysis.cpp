@@ -63,7 +63,6 @@ void analysis::record(hfdrecord& rec, int recn)
 {
 	onrecord(rec,recn);
 	history.push_back(rec);
-
 	if(data::isqouterecord(rec))
 		qhistory.push_back(rec);
 }

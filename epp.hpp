@@ -185,8 +185,7 @@ inline ostream& operator<<(ostream& str,const paramresult& r)
 };
 
 
-
-class action
+class object
 {
 public:
     enum elogginglevel { nologging, basiclogging, extendedlogging };
@@ -195,9 +194,9 @@ protected:
     ofstream nulstream;
     ostream& lout;
 protected:
-    action() : logging(nologging), lout(cout)
+    object() : logging(nologging), lout(cout)
     {}
-    virtual ~action() {}
+    virtual ~object() {}
 public:
     void setlogging(elogginglevel al = basiclogging)
     {
@@ -208,7 +207,7 @@ public:
 
 /// work in progress, neodszkousene
 
-class summary: public action
+class summary: public object
 {
     vector<unsigned int> hist;
 protected:
@@ -236,7 +235,7 @@ public:
     }
 };
 
-class estimator: public virtual action
+class estimator: public virtual object
 {
     vector<paraminfo> params;
 protected:
@@ -256,7 +255,7 @@ public:
 };
 
 
-class nloptuser: public virtual action
+class nloptuser: public virtual object
 {
 	nlopt::algorithm alg;
     bool ismax;
@@ -405,12 +404,48 @@ public:
     }
 };
 
-class sample
-{
-protected:
-    virtual unsigned int getn() = 0;
-    virtual unsigned int getdim() = 0;
+//class sample
+//{
+//protected:
+//    virtual unsigned int getn() = 0;
+//    virtual unsigned int getdim() = 0;
+//
+//};
 
+
+/// Empirical distribution on {0,1,...}
+
+class empdistn
+{
+    vector<unsigned int> dist;
+    unsigned int n;
+public:
+    empdistn() : n(0) {}
+    void add(unsigned int obs)
+    {
+        if(obs > dist.size())
+        {
+            unsigned int olds = dist.size();
+            dist.resize(olds+10);
+            for(unsigned int i=olds; i<dist.size(); i++)
+                dist[i] = 0;
+            dist[obs]++;
+            n++;
+        }
+    }
+    void getdist(vector<double> d)
+    {
+        if(n==0)
+        {
+            d.resize(0);
+        }
+        else
+        {
+            d.resize(dist.size());
+            for(unsigned int i=0; i<dist.size(); i++)
+                d[i] = (double) dist[i] / (double) n;
+        }
+    }
 };
 
 /// Class computing MLE estinate

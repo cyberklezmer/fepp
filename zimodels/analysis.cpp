@@ -14,54 +14,96 @@ void zianalysis::onstartpair(smpair& togo)
     cout << togo.stock << " at " << togo.market << endl;
 
     qchanges = new zirec[maxqchanges];
+    ajumps = new int[maxajumps];
+
+    qdist = new empdistn;
     M=0;
 
     mina = 1000000000L;
     maxa = 0;
+
+    firstt = -1;
+    sp=0;
+    sda = 0;
+    nsda=0;
+    ss = 0;
+    nss = 0;
+
 }
 
 void zianalysis::onrecord(hfdrecord& rec, int recn)
 {
-    if(!simulateby)
+    if(M < maxqchanges && sp < maxajumps)
     {
-        if(M < maxqchanges)
+        int hs = getqhistorysize();
+
+        int s = rec.q >= 0 ? 0 : (unitvolume ? 1 : -rec.q);
+        qdist->add(s);
+
+        bool firsttoday = (hs == 0);
+        bool sameaslast = !firsttoday
+                          && (rec.a == qchanges[M-1].a && rec.b == qchanges[M-1].b);
+        if(sameaslast) // if trade records were merged then the previous folume would be unknown
         {
-            int hs = getqhistorysize();
-
-            int s = rec.q >= 0 ? 0 : (unitvolume ? 1 : -rec.q);
-
-            bool firsttoday = (hs == 0);
-            bool sameaslast = !firsttoday
-                              && (rec.a == qchanges[M-1].a && rec.b == qchanges[M-1].b);
-            if(sameaslast) // if trade records were merged then the previous folume would be unknown
+            qchanges[M-1].q = rec.an;
+            qchanges[M-1].s = s;
+        }
+        else
+        {
+            bool sametime = !firsttoday && qchanges[M-1].t == rec.t;
+            if(sametime)
             {
-                qchanges[M-1].q = rec.an;
-                qchanges[M-1].s = s;
+                zirec& r = qchanges[M-1];
+                r.a = rec.a;
+                r.b = rec.b;
+                r.t = rec.t;
+                r.q = rec.an;
+                r.s = s;
             }
             else
             {
-                bool sametime = !firsttoday && qchanges[M-1].t == rec.t;
-                if(sametime)
+                zirec& r = qchanges[M];
+                r.firstinday = firsttoday;
+                r.a = rec.a;
+                r.b = rec.b;
+                r.t = rec.t;
+                r.q = rec.an;
+                r.s = s;
+                r.m = -1;
+
+
+                if(r.firstinday)
+                    firstt = r.t;
+                if(firstt<0)
+                    throw runtime_error("first qchange not firstinday");
+                if( !r.firstinday && r.a != qchanges[M-1].a  && r.t - firstt > warmuptime )
                 {
-                    zirec& r = qchanges[M-1];
-                    r.a = rec.a;
-                    r.b = rec.b;
-                    r.t = rec.t;
-                    r.q = rec.an;
-                    r.s = s;
+                    if(!onlytrades || r.s > 0) // tbd check of tjere are recprds vopůagom s-q >=0
+                    {
+                        r.m = r.s - qchanges[M-1].q;
+                        r.m = r.m >= 0 ? r.m : 0;
+                        int da = r.a-qchanges[M-1].a;
+                        if(da > 0)
+                        {
+                            sda += da;
+                            nsda++;
+                            ajumps[sp++] = M;
+                        }
+                        if(r.s > 0)
+                        {
+                            ss += r.s;
+                            nss++;
+                        }
+
+                        if(r.a < mina)
+                            mina = r.a;
+                        if(r.a > maxa)
+                            maxa = r.a;
+
+                    }
                 }
-                else
-                {
-                    zirec& r = qchanges[M];
-                    r.firstinday = firsttoday;
-                    r.a = rec.a;
-                    r.b = rec.b;
-                    r.t = rec.t;
-                    r.q = rec.an;
-                    r.s = s;
-                    r.m = -1;
-                    M++;
-                }
+
+                M++;
             }
         }
     }
@@ -75,8 +117,8 @@ void zianalysis::estimate(zimodel& model, vector<paramresult>& res,
     cout << "Estimating model " << model.getname() << endl;
     zimleestimator e(model,*this);
     e.setmaxtime(maxmletime);
-    e.setlogging(extendedlogging ? action::extendedlogging :
-                 action::basiclogging);
+    e.setlogging(extendedlogging ? object::extendedlogging :
+                 object::basiclogging);
 
     if(0)
     {
@@ -139,14 +181,24 @@ void zianalysis::estimate(zimodel& model, vector<paramresult>& res,
         {
             double q = fabs(res[i].z());
             if(q<1.645)
+            {
                 significant = false;
+                break;
+            }
+        }
+        else
+        {
+            significant = false;
+            break;
         }
     }
 }
 
 
-void zianalysis::evaluate(zimodel* modelused, const vector<paramresult>& res)
+double zianalysis::evaluate(zimodel* modelused, const vector<paramresult>& res,
+                            int from, int len, double avgdaplus)
 {
+    double result = na;
     try
     {
         try
@@ -167,7 +219,7 @@ void zianalysis::evaluate(zimodel* modelused, const vector<paramresult>& res)
 
             csv << "err,dt,da,t,s" << endl;
 
-            for(int i=N; i<N+Noff; i++)
+            for(int i=from; i<from+len; i++)
             {
                 const zirec& last=X(i,1);
                 const zirec& r=X(i,0);
@@ -217,15 +269,21 @@ void zianalysis::evaluate(zimodel* modelused, const vector<paramresult>& res)
             double P2 = 1-SSE/SST;
             double MAT = 0;
 
+            double avg = avgdaplus == 0
+              ? (double) S / (double) nobs : avgdaplus;
             for(unsigned int k=0; k<smpl.size(); k++)
-                MAT += fabs(smpl[k]-(double) S / (double) nobs);
+                MAT += fabs(smpl[k]-avg);
 
             double P1 = 1 - MAE / MAT;
             cout << "P1=" << P1 << " P2=" << P2 << endl;
             //latex << "$\\bar a=" << S/(double) nobs << "$," << endl;
-            latex << "$P_1 = " << P1 << "$";
+
             if(extendedoutput)
+            {
+                latex << "$P_1 = " << P1 << "$";
                 latex << ", $P_2=" << P2 << "$";
+            }
+            result = P1;
         }
         catch(const runtime_error& e)
         {
@@ -238,92 +296,20 @@ void zianalysis::evaluate(zimodel* modelused, const vector<paramresult>& res)
         cout << "Exception occured when evaluating" << endl;
         latex << "Exception occured when evaluating" << endl;
     }
+    return result;
 }
 
 
 
 void zianalysis::onendpair(smpair& togo)
 {
-    double warmupt;
 
-    if(simulateby)
-    {
-        int resnum;
-        cdasimulator s(*simulateby,maxqchanges / 3,10);
-        s.simulate(maxqchanges,qchanges,resnum);
-        M=resnum;
-        cout << "maxqchanges=" << maxqchanges << " successfully got="
-             << resnum << endl;
-        warmupt = 60;
-    }
-    else
-        warmupt = warmuptime;
-
-    ajumps = new int[maxajumps];
-    int sp=0;
-    double sda = 0;
-    int nsda=0;
-    double ss = 0;
-    int nss = 0;
-
-    double firstt = -1;
-    for(int i=0; i<M; i++)
-    {
-        zirec& r = qchanges[i];
-        if(r.firstinday)
-            firstt = r.t;
-        if(firstt<0)
-            throw runtime_error("first qchange not firstinday");
-        if( !r.firstinday && r.a != qchanges[i-1].a  && r.t - firstt > warmupt )
-        {
-            if(!onlytrades || r.s > 0) // tbd check of tjere are recprds vopůagom s-q >=0
-            {
-                r.m = r.s - qchanges[i-1].q;
-                r.m = r.m >= 0 ? r.m : 0;
-                int da = r.a-qchanges[i-1].a;
-                if(da > 0)
-                {
-                    sda += da;
-                    nsda++;
-                    ajumps[sp++] = i;
-                }
-                if(r.s > 0)
-                {
-                    ss += r.s;
-                    nss++;
-                }
-
-                if(r.a < mina)
-                    mina = r.a;
-                if(r.a > maxa)
-                    maxa = r.a;
-
-                if(sp == maxajumps)
-                    break;
-            }
-        }
-    }
     N = sp * offsampleratio / (offsampleratio + 1);
     Noff = sp-N;
 
-    if(simulateby)
-    {
-        latex << "Sim: " << simulateby->getname() << "(";
-        for(unsigned int i=0; ; i++)
-        {
-            latex << simulateby->getparams()[i].initial;
-            if(i+1==simulateby->getparams().size())
-                break;
-            latex << ",";
-        }
-        latex << ")" << endl;
-    }
-    else
-    {
-        latex << "{ \\normalsize " <<
-              togo.stock << " at " << togo.market
-              << "}" << endl;
-    }
+    latex << "{ \\normalsize "
+          << togo.stock << " at " << togo.market
+          << "}" << endl;
 
     latex << "\\\\ \\smallskip" << endl;
     if(extendedoutput)
@@ -345,6 +331,7 @@ void zianalysis::onendpair(smpair& togo)
     zimodel* modelused = 0;
     int nofmodelused = 0;
     bool tailmodelused;
+    bool anysignificant = false;
 
     cout << "Onlytrades = " << onlytrades << ", unitvolume = " << unitvolume
          << endl;
@@ -429,12 +416,13 @@ void zianalysis::onendpair(smpair& togo)
             }
             else
             {
+                if(significant)
+                    anysignificant = true;
                 if(extendedoutput)
                 {
                     if(significant)
                         latex << "$^\\star$" << endl;
-                    latex << ": ";
-                    evaluate(model,r);
+                    latex << ": " << evaluate(model,r, N, Noff, avgdaplus);
                 }
             }
             double ratio = 2*(ll-loglik);
@@ -462,6 +450,8 @@ void zianalysis::onendpair(smpair& togo)
                     nofmodelused = n;
                     tailmodelused = n>1 ? true : false;
                 }
+                if(anysignificant && !significant)
+                    break;
                 if(n==maxn)
                     break;
                 else
@@ -489,9 +479,36 @@ void zianalysis::onendpair(smpair& togo)
             if(avgdaplus < 1.02 && !onlytrades)
                 latex << "$P_1=n/a$" << endl;
             else
-                evaluate(modelused,result);
-            latex << "\\\\ \\smallskip" << endl;
+                latex << "$P="
+                  << evaluate(modelused,result, N, Noff, avgdaplus)
+                  << "$" << endl;
         }
+        if(resample)
+        {
+            vector<double> pars(result.size());
+            cout << "Simulating pars: ";
+            for(unsigned int k=0; k<result.size(); k++)
+            {
+                pars[k] = result[k].value;
+                cout << pars[k] << " ";
+            }
+            cout << endl;
+
+            modelused->setinitparams(pars);
+
+            int resnum;
+            cdasimulator s(*modelused,maxqchanges / 3,maxqchanges / 10);
+            s.simulate(maxqchanges,qchanges,resnum);
+            int len = resnum < Noff ? resnum : Noff;
+            cout << "maxqchanges=" << maxqchanges << " successfully got="
+                << resnum << endl;
+            latex << ", $P_{\\mathrm{sim}}="
+                << evaluate(modelused,result, 0, len, 0)
+                << "$";
+        }
+
+        latex << "\\\\ \\smallskip" << endl;
+
         cout << "Writing latex..." << endl;
         latex << "\\smallskip " << endl;
         if(extendedoutput)

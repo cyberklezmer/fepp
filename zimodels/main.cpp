@@ -145,15 +145,16 @@ int main(int argc, char ** argv)
         {
             zianalysis e("zi");
             e.modeltype = zianalysis::tail;
-            e.maxmletime = 600;
-            e.unitvolume = false;
+            e.maxmletime = 1200;
+            e.unitvolume = true;
             e.includenu = false;
             e.includegamma = false;
             e.includezeta = false;
             e.includeeta = false;
-            e.setsample(1000,false);
+            e.setsample(1500,false);
+            e.resample = true;
             e.firstn = 1;
-            e.maxn = 2;
+            e.maxn = 4;
             e.twodimestimation = true;
             e.extendedlogging = false;
 
@@ -165,35 +166,22 @@ int main(int argc, char ** argv)
 		{
             zianalysis e("g");
             e.modeltype = zianalysis::tail;
-            e.maxmletime = 600;
+            e.maxmletime = 1200;
             e.unitvolume = false;
             e.includenu = false;
             e.includegamma = false;
             e.includezeta = false;
             e.includeeta = false;
-            e.setsample(1000,true);
+            e.setsample(1500,true);
             e.firstn = 1;
-            e.maxn = 2;
+            e.maxn = 4;
             e.twodimestimation = true;
-            e.extendedlogging = false;
+            e.extendedlogging = true;
 
             program pgm(pairs,e,start,end);
             pgm.process();
             return 0;
 		}
-        case 20:
-        {
-            zinparmodel m(1,true,false,false,false);
-            zianalysis e("zi");
-
-            vector<double> pars(3);
-            pars[0]=0.06;
-            pars[1]=0.14;
-            pars[2]=-1.64;
-            e.simulateby = &m;
-            m.setinitparams(pars);
-            return 0;
-        }
 
 		break;
 	}

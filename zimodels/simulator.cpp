@@ -18,6 +18,8 @@ using namespace boost::random;
 
 int cdasimulator::getpoisson(double lambda)
 {
+    if(lambda == 0)
+        return 0;
     poisson_distribution<int> pdist(lambda);
     variate_generator< mt19937&, poisson_distribution<int> > rvt(gen, pdist);
     return rvt();
@@ -38,10 +40,6 @@ int cdasimulator::getbi(int n, double p)
 
 void cdasimulator::simulate(int an, zirec* az, int& resnum)
 {
-//an = 100;
-//warmup = 0;
-//cout.precision(2);
-//N = 100;
     cout << "Simulation: " << an << " required" << endl;
     vector<double> theta = model.getinitparams();
 
@@ -49,6 +47,7 @@ void cdasimulator::simulate(int an, zirec* az, int& resnum)
 
     int nuinv = (int) (1.0 / model.getnu(theta) + 0.5);
     int z=0;
+    int wn=0;
     vector<double> A(N);
 
     if(N<4)
@@ -69,15 +68,6 @@ void cdasimulator::simulate(int an, zirec* az, int& resnum)
     bool firstinday = true;
     for(int i=0; ; i++)
     {
-
-if(A[a-1] == 0)
-{
-cout << "i=" << i << " A=(";
-for(int k=0; k < N; k++)
-    cout << A[k] << " ";
-cout << ") ";
-cout << "a=" << a << " b=" << b << endl;
-}
         double sint = 0;
         int d=a-b;
         int ps = 2*d+4;
@@ -105,12 +95,6 @@ cout << "a=" << a << " b=" << b << endl;
         boost::random::discrete_distribution<int> dist(p);
         variate_generator< mt19937&, discrete_distribution<int> > vgen(gen, dist);
         int v = vgen();
-/*cout << "(";
-double sss=0;
-for(int k=0; k < ps; k++)
-    cout << p[k] << " ", sss+=p[k];
-cout << "=" << sss << ")->";
-cout << v << endl;*/
         double c = egen();
         int outs = 0; // signalizes a jump out of the spread
         bool ins = false;
@@ -163,7 +147,7 @@ cout << v << endl;*/
                 if(p != b)
                 {
                     newb=p;
-                     ins = true;
+                    ins = true;
                 }
             }
         }
@@ -227,22 +211,23 @@ cout << v << endl;*/
         b = newb;
 
         bool newzi = ins || outs || bmo;
-        if(newzi && t>warmup)
+        if(newzi)
         {
-            zirec& r=az[z++];
-            r.t = t;
-            r.a = a;
-            r.b = b;
-            r.firstinday = firstinday;
-            r.q = A[a-1]* nuinv;
-            r.s = (bmo ? 1 : 0) * nuinv;
-            if(z%100==0)
-                cout << z << ": t=" << t << " a=" << a << " b=" << b << " q=" << r.q << " s=" << r.s << endl;
-
-            firstinday = false;
-            if(z==an)
+            if(wn++ > warmupn)
             {
-                break;
+                zirec& r=az[z++];
+                r.t = t;
+                r.a = a;
+                r.b = b;
+                r.firstinday = firstinday;
+                r.q = A[a-1]* nuinv;
+                r.s = (bmo ? 1 : 0) * nuinv;
+//                if(z%100==0)
+//                    cout << z << ": t=" << t << " a=" << a << " b=" << b << " q=" << r.q << " s=" << r.s << endl;
+
+                firstinday = false;
+                if(z==an)
+                    break;
             }
         }
 

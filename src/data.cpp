@@ -176,7 +176,6 @@ bool data::findnextday(date& d)
 	{
 		if(daypointer+1 == hfd::size())
 			return false;
-
 		hfd::dayrecord dr = hfd::at(daypointer++);
 
 		if(pair.stock==dr.stock && pair.market==dr.market) // here we rely on ordering of query in \p hfd

@@ -109,11 +109,11 @@ public:
 
     double getkappa(int a,int b, int p, const vector<double>& theta)
     {
-        return getkappa(a,b,p,theta, phoograd);
+        return getkappa(a,b,p > a ? p : a+1,theta, phoograd);
     }
     double getrho(int a, int b, int p, const vector<double>& theta)
     {
-        return getrho(a,b,p,theta, phoograd);
+        return getrho(a,b,p > a ? p : a+1,theta, phoograd);
     }
 
     virtual double getphi(int a, int b, int p, const vector<double>& theta)
@@ -123,7 +123,7 @@ public:
 
     virtual double gettheta(int a, int b, int p, const vector<double>& theta)
     {
-        return getkappa(a,b,p,theta, phoograd);
+        return getkappa(a,b,p,theta);
     }
 
     double getlambda(int a,int b, int p, const vector<double>& theta)
@@ -383,7 +383,9 @@ public:
     emodeltype modeltype;
     int firstn;
     int maxn;
+    double warmuptime;
     bool unitvolume;
+    bool resample;
     bool twodimestimation;
     bool extendedlogging;
     bool extendedoutput;
@@ -392,14 +394,13 @@ public:
     bool includeeta;
     bool includezeta;
 	double maxmletime;
-	zimodel* simulateby;
 protected:
 	bool onlytrades;
  	int maxajumps;
 	int maxqchanges;
-    static const double warmuptime= 10*60;
 
 protected:
+    empdistn* qdist;
     /// records quote changes
     zirec* qchanges;
     int M;
@@ -412,6 +413,14 @@ protected:
     // filled by onenepair
     int mina;
     int maxa;
+
+    // "local" in onrecord
+    double firstt;
+    int sp;
+    double sda;
+    int nsda;
+    double ss;
+    int nss;
 
     static const int offsampleratio = 10;
 public:
@@ -441,11 +450,8 @@ public:
     void setsample(int samplesize, bool aonlytrades)
     {
     	maxajumps = samplesize * (offsampleratio +1 ) / offsampleratio;
-	    maxqchanges = samplesize *
-	                   (offsampleratio +1 ) / offsampleratio
-	                   * (aonlytrades ? 400 : 15);
+	    maxqchanges = maxajumps * 10000;
         onlytrades = aonlytrades;
-
     }
 
 	zianalysis(const string& aname = "zianalysis") :
@@ -453,7 +459,9 @@ public:
 		  modeltype(tail),
 		  firstn(1),
 		  maxn(4),
+		  warmuptime(10*60),
 		  unitvolume(false),
+		  resample(false),
 		  twodimestimation(true),
 		  extendedlogging(false),
 		  extendedoutput(false),
@@ -462,16 +470,18 @@ public:
 		  includeeta(false),
 		  includezeta(false),
 	      maxmletime(10*60),
-	      simulateby(0),
 		  qchanges(0),
 		  ajumps(0)
 	{
         setsample(500,true);
+        if(resample && !unitvolume)
+            throw logic_error("Resample implemented only for unit volume");
 	}
 
 	~zianalysis ()
 	{
         delete qchanges;
+        delete qdist;
         delete ajumps;
     }
 
@@ -483,7 +493,8 @@ public:
           bool catchex, bool& failed,
           bool& significant, double& ll,
           string& failmsg);
-    void evaluate(zimodel* modelused, const vector<paramresult>& pars);
+    double evaluate(zimodel* modelused, const vector<paramresult>& pars,
+                                                    int from, int len, double avgdaplus);
 
 };
 
@@ -706,15 +717,14 @@ class cdasimulator
     zimodel& model;
     int N;
     mt19937 gen;
-    double warmup;
-
+    int warmupn;
 public:
     int getpoisson(double lambda);
     int getbi(int n, double p);
     cdasimulator(zimodel& amodel,
-          int amaxprice, double awarmup):
+          int amaxprice, int awarmupn):
           model(amodel),
-          N(amaxprice), warmup(awarmup)
+          N(amaxprice), warmupn(awarmupn)
     {
     }
     void simulate(int an, zirec* az, int& resnum);
