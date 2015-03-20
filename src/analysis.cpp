@@ -52,7 +52,7 @@ void analysis::startpair(smpair& apair)
 	}
 	else
 		latex << "&";
-	latex << "\\begin{minipage}" <<  "{4.5cm}" << endl;
+	latex << "\\begin{minipage}[t]" <<  "{4.5cm}" << endl;
 	latex << "\\vspace{3mm}" << endl;
 
 	onstartpair(pair);

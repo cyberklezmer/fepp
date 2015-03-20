@@ -115,11 +115,11 @@ void aqestimator::getomega
         if(debug>1)
             cout << "kth: a=" << kth.a << ", t=" << kth.t << " deltat=" << deltat << endl;
         vector<double> gro(q);
-        double dc = deltat * model.getrho(kth.a,kth.b,p,params,gro);
+        double dc = deltat * model.rho(kth.a,kth.b,p,params,gro);
         vector<double> gdc = deltat * gro;
 
         vector<double> gphi(q);
-        double phi=model.getphi(kth.a,kth.b,p,params, gphi);
+        double phi=model.phi(kth.a,kth.b,p,params, gphi);
 
         double eck = exp(-csum-dc);
 
@@ -496,7 +496,7 @@ double aqestimator::getlogdensity
         if(prob<=1e-40)
         {
             grad = zero_vector(q);
-            return -0.001;
+            return -100;
         }
         else
         {

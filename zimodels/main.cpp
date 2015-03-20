@@ -56,14 +56,17 @@ int main(int argc, char ** argv)
             case 'E':
                 todo = 2;
                 break;
+            case 'z':
+                todo = 10;
+                break;
             case 'Z':
+                todo = 20;
+                break;
+            case 'g':
                 todo = 11;
                 break;
             case 'G':
-                todo = 12;
-                break;
-            case 'X':
-                todo = 20;
+                todo = 21;
                 break;
 
             default:
@@ -141,20 +144,24 @@ int main(int argc, char ** argv)
             pgm.process();
         }
         break;
-		case 11:
+		case 10:
+		case 20:
         {
-            zianalysis e("zi");
+            const char* name= todo==10 ? "g5000kappa" : "g5000phi";
+            zianalysis e(name);
+            e.phipar = todo==10 ? false: true;
+
             e.modeltype = zianalysis::tail;
-            e.maxmletime = 1200;
+            e.maxmletime = 2500;
             e.unitvolume = true;
             e.includenu = false;
             e.includegamma = false;
             e.includezeta = false;
             e.includeeta = false;
-            e.setsample(1500,false);
-            e.resample = true;
+            e.setsample(5000,false);
+            e.resample = false;
             e.firstn = 1;
-            e.maxn = 4;
+            e.maxn = 3;
             e.twodimestimation = true;
             e.extendedlogging = false;
 
@@ -162,21 +169,24 @@ int main(int argc, char ** argv)
             pgm.process();
             return 0;
         }
-		case 12:
+		case 11:
+		case 21:
 		{
-            zianalysis e("g");
+            const char* name= todo==11 ? "g5000kappa" : "g5000phi";
+            zianalysis e(name);
+            e.phipar = todo==11 ? false: true;
             e.modeltype = zianalysis::tail;
-            e.maxmletime = 1200;
+            e.maxmletime = 2500;
             e.unitvolume = false;
             e.includenu = false;
             e.includegamma = false;
             e.includezeta = false;
-            e.includeeta = false;
-            e.setsample(1500,true);
+            e.includeeta = true;
+            e.setsample(5000,true);
             e.firstn = 1;
-            e.maxn = 4;
+            e.maxn = 3;
             e.twodimestimation = true;
-            e.extendedlogging = true;
+            e.extendedlogging = false;
 
             program pgm(pairs,e,start,end);
             pgm.process();
@@ -185,29 +195,8 @@ int main(int argc, char ** argv)
 
 		break;
 	}
-	cout << "Hotovo!" << endl;
+	cout << "Finished!" << endl;
 	return 0;
 }
 
 
-/*    double d=1;
-    for(int i=-1; i<2; i++)
-    {
-        for(int j=-1; j<2; j++)
-        {
-            vector<double> grad(zero_vector(2));
-            vector<double> g(2);
-            vector<double> x(2);
-            x[0] = p[0].initial + i*d;
-            x[1] = p[1].initial + j*d;
-            double s=0;
-            for(int n=0; n<9; n++)
-            {
-                s+= m.evallogdensity(n,x,g);
-                grad = grad + g;
-            }
-            cout << x[0] << " " << x[1] << " = " << s
-                 << " (" << grad[0] << "," << grad[1] << ")" << endl;
-        }
-        cout << endl;
-    }*/

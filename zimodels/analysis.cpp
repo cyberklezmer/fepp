@@ -6,6 +6,8 @@
  */
 
 #include "zimodels.hpp"
+#include <ctime>
+#include <iostream>
 
 
 
@@ -38,21 +40,44 @@ void zianalysis::onrecord(hfdrecord& rec, int recn)
         int hs = getqhistorysize();
 
         int s = rec.q >= 0 ? 0 : (unitvolume ? 1 : -rec.q);
-        qdist->add(s);
+//        qdist->add(s);
 
         bool firsttoday = (hs == 0);
-        bool sameaslast = !firsttoday
-                          && (rec.a == qchanges[M-1].a && rec.b == qchanges[M-1].b);
+        if(M==0 && !firsttoday)
+            throw logic_error("M==0 && !firsttoday");
+        bool sameaslast;
+        if(firsttoday)
+            sameaslast = false;
+        else
+        {
+            if(M==0)
+                throw logic_error("M==0 (1)");
+            sameaslast = (rec.a == qchanges[M-1].a && rec.b == qchanges[M-1].b);
+        }
         if(sameaslast) // if trade records were merged then the previous folume would be unknown
         {
+            if(M==0)
+                throw logic_error("M==0 (1)");
             qchanges[M-1].q = rec.an;
+
             qchanges[M-1].s = s;
         }
         else
         {
-            bool sametime = !firsttoday && qchanges[M-1].t == rec.t;
+            bool sametime;
+            if(firsttoday)
+                sametime = false;
+            else
+            {
+                if(M==0)
+                    throw logic_error("M==0 (2)");
+                sametime = (qchanges[M-1].t == rec.t);
+            }
             if(sametime)
             {
+               if(M==0)
+                    throw logic_error("M==0 (2)");
+
                 zirec& r = qchanges[M-1];
                 r.a = rec.a;
                 r.b = rec.b;
@@ -109,6 +134,14 @@ void zianalysis::onrecord(hfdrecord& rec, int recn)
     }
 }
 
+void logrealtime()
+{
+    time_t t = time(0);   // get time now
+    struct tm * now = localtime( & t );
+    cout << (now->tm_hour) << ':'
+         << (now->tm_min)
+         << endl;
+}
 
 void zianalysis::estimate(zimodel& model, vector<paramresult>& res,
                           bool catchex, bool& failed,
@@ -125,7 +158,7 @@ void zianalysis::estimate(zimodel& model, vector<paramresult>& res,
         vector<double> pars(2);
         vector<double> g(2);
         pars[0] = 2.09518;
-        pars[1] = 0.984748;
+        pars[1] = 0.0984748;
         e.setparameters(pars);
         e.testgrads(274,5);
         throw;
@@ -134,12 +167,13 @@ void zianalysis::estimate(zimodel& model, vector<paramresult>& res,
     failed = false;
     emsg = "";
     bool grad;
+
+    logrealtime();
     try
     {
         try
         {
-            e.setgradient(grad = false);
-            e.setxtolrel(10e-5);
+            e.setgradient(grad = true);
             ll = e.estimate(res);
         }
         catch(const runtime_error& e)
@@ -154,7 +188,8 @@ void zianalysis::estimate(zimodel& model, vector<paramresult>& res,
     {
         try
         {
-            e.setgradient(grad = true);
+            e.setgradient(grad = false);
+            e.setxtolrel(10e-5);
             ll = e.estimate(res);
         }
         catch(...)
@@ -174,6 +209,7 @@ void zianalysis::estimate(zimodel& model, vector<paramresult>& res,
                 emsg = "Failed";
         }
     }
+    logrealtime();
     significant = true;
     for(unsigned int i=0; i<res.size(); i++)
     {
@@ -219,8 +255,17 @@ double zianalysis::evaluate(zimodel* modelused, const vector<paramresult>& res,
 
             csv << "err,dt,da,t,s" << endl;
 
+            clock_t start = clock();
+
             for(int i=from; i<from+len; i++)
             {
+                clock_t now = clock();
+                if((now-start) / (double)CLOCKS_PER_SEC > maxmletime)
+                {
+                    cout << "Evaluation time exceede - only "
+                         << i-from << " observation used" << endl;
+                    break;
+                }
                 const zirec& last=X(i,1);
                 const zirec& r=X(i,0);
                 double da=r.a - last.a;
@@ -309,22 +354,21 @@ void zianalysis::onendpair(smpair& togo)
 
     latex << "{ \\normalsize "
           << togo.stock << " at " << togo.market
-          << "}" << endl;
+          << "}" << endl ;
 
-    latex << "\\\\ \\smallskip" << endl;
+    latex << "\\\\" << endl << endl << "\\smallskip" << endl;
     if(extendedoutput)
         latex << "$N/M/maxq=" << getN() << "/" << M
           << "/" << maxqchanges << "$";
     else
-        latex << "$N=" << getN() << "$" << endl;
-    latex << "\\\\ \\smallskip" << endl;
+        latex << "$N=" << getN() << "$, " << endl;
 
     csv << togo.stock << " at " << togo.market << endl;
 
     double avgdaplus = nsda ? sda / nsda : 0;
     latex << "$\\overline{a}^+=" << avgdaplus
           << "$, $\\overline q=" << (nss ? ss / nss : 0)
-          << "$\\\\ \\smallskip" << endl;
+          << "$\\\\" << endl << endl << "\\smallskip" << endl;
 
     vector<paramresult> result;
     double loglik = -HUGE_VAL;
@@ -347,17 +391,17 @@ void zianalysis::onendpair(smpair& togo)
             switch(modeltype)
             {
             case individual:
-                model = new zinparmodel(n,includenu,includegamma,
+                model = new zinparmodel(n,phipar, includenu,includegamma,
                                         includeeta, includezeta);
                 break;
             case tail:
                 if(n==1)
-                    model = new zinparmodel(n,includenu,includegamma,
+                    model = new zinparmodel(n,phipar, includenu,includegamma,
                                             includeeta, includezeta);
                 else
                 {
                     zinptmodel* npmod;
-                    model = npmod = new zinptmodel(n-1,includenu,includegamma,
+                    model = npmod = new zinptmodel(n-1,phipar,includenu,includegamma,
                                                    includeeta, includezeta);
                     if(modelused)
                     {
@@ -369,7 +413,7 @@ void zianalysis::onendpair(smpair& togo)
                         {
                             for(int k=0; k<npmod->getn(); k++)
                             {
-                                p[npmod->firstphi()+k] = result[0].value;
+                                p[npmod->firstkappaorphi()+k] = result[0].value;
                                 p[npmod->firstrho()+k] = result[1].value;
                             }
                         }
@@ -377,18 +421,18 @@ void zianalysis::onendpair(smpair& togo)
                         {
                             int m=0;
                             for(; m<nofmodelused-1; m++)
-                                p[npmod->firstphi()+m]
-                                    = result[mod->firstphi()+m].value;
-                            p[npmod->firstphi()+m]
-                                = result[mod->firstphi()+m-1].value;
+                                p[npmod->firstkappaorphi()+m]
+                                    = result[mod->firstkappaorphi()+m].value;
+                            p[npmod->firstkappaorphi()+m]
+                                = result[mod->firstkappaorphi()+m-1].value;
                             int k=0;
                             for(; k<nofmodelused-1; k++)
                                 p[npmod->firstrho()+k]
-                                    = result[mod->firstphi()+k].value;
-                            p[npmod->firstphi()+k]
-                                = result[mod->firstphi()+k-1].value;
-                            p[npmod->alphaphi()]
-                                = result[mod->alphaphi()].value;
+                                    = result[mod->firstkappaorphi()+k].value;
+                            p[npmod->firstkappaorphi()+k]
+                                = result[mod->firstkappaorphi()+k-1].value;
+                            p[npmod->alphakappaorphi()]
+                                = result[mod->alphakappaorphi()].value;
                             p[npmod->alpharho()]
                                 = result[mod->alpharho()].value;
                         }
@@ -418,11 +462,14 @@ void zianalysis::onendpair(smpair& togo)
             {
                 if(significant)
                     anysignificant = true;
-                if(extendedoutput)
+                if(n==1 || extendedoutput)
                 {
                     if(significant)
-                        latex << "$^\\star$" << endl;
-                    latex << ": " << evaluate(model,r, N, Noff, avgdaplus);
+                    {
+                        latex << "$P_0="
+                            << evaluate(model,r, N, Noff, avgdaplus)
+                            << "$ ";
+                    }
                 }
             }
             double ratio = 2*(ll-loglik);
@@ -473,15 +520,18 @@ void zianalysis::onendpair(smpair& togo)
 
     if(modelused)
     {
-        if(!extendedoutput)
+        if(!extendedoutput && tailmodelused)
         {
             cout << "Evaluating..." << endl;
-            if(avgdaplus < 1.02 && !onlytrades)
-                latex << "$P_1=n/a$" << endl;
-            else
-                latex << "$P="
-                  << evaluate(modelused,result, N, Noff, avgdaplus)
-                  << "$" << endl;
+            if(tailmodelused)
+            {
+                if(avgdaplus < 1.02 && !onlytrades)
+                    latex << ", $P_=n/a$" << endl;
+                else
+                    latex << "$P="
+                      << evaluate(modelused,result, N, Noff, avgdaplus)
+                      << "$" << endl;
+            }
         }
         if(resample)
         {
@@ -497,42 +547,57 @@ void zianalysis::onendpair(smpair& togo)
             modelused->setinitparams(pars);
 
             int resnum;
-            cdasimulator s(*modelused,maxqchanges / 3,maxqchanges / 10);
-            s.simulate(maxqchanges,qchanges,resnum);
-            int len = resnum < Noff ? resnum : Noff;
+            cdasimulator s(*modelused,Noff*10,Noff);
+            s.simulate(Noff,qchanges,resnum);
+            int m=0;
+            for(int i=0; i<resnum; i++)
+            {
+                zirec& r = qchanges[i];
+                if( !r.firstinday && r.a != qchanges[i-1].a )
+                {
+                   r.m = r.s - qchanges[M-1].q;
+                   r.m = r.m >= 0 ? r.m : 0;
+                   int da = r.a-qchanges[M-1].a;
+                   if(da > 0)
+                   {
+                      ajumps[m++] = i;
+                      if(m == Noff)
+                        break;
+                   }
+                }
+            }
+
             cout << "maxqchanges=" << maxqchanges << " successfully got="
                 << resnum << endl;
             latex << ", $P_{\\mathrm{sim}}="
-                << evaluate(modelused,result, 0, len, 0)
+                << evaluate(modelused,result, 0, m, 0)
                 << "$";
         }
 
-        latex << "\\\\ \\smallskip" << endl;
-
         cout << "Writing latex..." << endl;
-        latex << "\\smallskip " << endl;
+        latex << "\\\\" << endl << endl
+              << " \\smallskip" << endl;
+
         if(extendedoutput)
             latex << modelused->getname() << "\\\\" << endl;
-
-        latex << "\\smallskip" << endl;
 
         for(unsigned int i=0; i< result.size(); i++)
         {
             latex.precision(4);
             result[i].output(latex,true);
-            latex << ", ";
             //            if((i%2))
             latex << "\\\\" ;
         }
         latex << "\\smallskip" << endl;
-        if(tailmodelused) // i.e. the model is with tails
+        if(tailmodelused && phipar) // i.e. the model is with tails
         {
             zinptmodel* m = (zinptmodel*) modelused;
-            double alphak = result[m->alphaphi()].value
+            double alphak = result[m->alphakappaorphi()].value
                               + result[m->alpharho()].value;
-            double s = sqrt(result[m->alphaphi()].std
+            double s = sqrt(result[m->alphakappaorphi()].std
                               + result[m->alpharho()].std);
-            latex << "$\\alpha_{\\kappa}=" << alphak
+            latex << endl << "\\smallskip" << endl << endl
+                  << "$\\alpha_{\\kappa}=" << alphak
                   << "(" << s << ")^{"
                   << paramresult::stars(alphak/s)
                   << "}$\\\\"<< endl;

@@ -1,4 +1,5 @@
 
+
 #include "zimodels.hpp"
 
 #include <boost/random/mersenne_twister.hpp>
@@ -209,7 +210,7 @@ void cdasimulator::simulate(int an, zirec* az, int& resnum)
         }
         a = newa;
         b = newb;
-
+//cout << a << "..." << b << endl;
         bool newzi = ins || outs || bmo;
         if(newzi)
         {
@@ -232,6 +233,7 @@ void cdasimulator::simulate(int an, zirec* az, int& resnum)
         }
 
     }
+    cout << z << " obtained." << endl;
     resnum = z;
 }
 

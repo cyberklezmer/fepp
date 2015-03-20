@@ -86,39 +86,75 @@ class zimodel
 {
 protected:
     vector <paraminfo> params;
+    bool phipar;
     vector<double> phoograd;
 public:
     virtual string getname() = 0;
 
+protected:
+    virtual double getkappa(int a, int b, int p,
+             const vector<double>& theta, vector<double>& grad) = 0;
     virtual double getrho(int a, int b, int p,
              const vector<double>& theta, vector<double>& grad) = 0;
-     virtual double getphi(int a, int b, int p,
+    virtual double getphi(int a, int b, int p,
              const vector<double>& theta, vector<double>& grad) = 0;
-    virtual double getkappa(int a, int b, int p,
+ public:
+    virtual double kappa(int a, int b, int p,
              const vector<double>& theta, vector<double>& grad)
     {
-        int q = theta.size();
-        vector<double> pg(q);
-        vector<double> rg(q);
-        double rho = getrho(a,b,p,theta,rg);
-        double phi = getphi(a,b,p,theta,pg);
-        grad = pg * rho + rg * phi;
+        if(phipar)
+        {
+            int q = theta.size();
+            vector<double> pg(q);
+            vector<double> rg(q);
+            double rho = getrho(a,b,p,theta,rg);
+            double phi = getphi(a,b,p,theta,pg);
+            grad = pg * rho + rg * phi;
 
-        return phi * rho;
+            return phi * rho;
+        }
+        else
+            return getkappa(a,b,p,theta,grad);
     }
+
+
+    virtual double phi(int a, int b, int p,
+             const vector<double>& theta, vector<double>& grad)
+    {
+        if(!phipar)
+        {
+            int q = theta.size();
+            vector<double> kg(q);
+            vector<double> rg(q);
+            double kap = getkappa(a,b,p,theta,kg);
+            double rh = getrho(a,b,p,theta,rg);
+            grad = (1.0 / rh / rh) * (kg * rh - rg * kap) ;
+
+            return kap / rh;
+        }
+        else
+            return getphi(a,b,p,theta,grad);
+    }
+    virtual double rho(int a, int b, int p,
+             const vector<double>& theta, vector<double>& grad)
+    {
+        return getrho(a,b,p,theta,grad);
+    }
+
+
 
     double getkappa(int a,int b, int p, const vector<double>& theta)
     {
-        return getkappa(a,b,p > a ? p : a+1,theta, phoograd);
+        return kappa(a,b,p > a ? p : a+1,theta, phoograd);
     }
     double getrho(int a, int b, int p, const vector<double>& theta)
     {
-        return getrho(a,b,p > a ? p : a+1,theta, phoograd);
+        return rho(a,b,p > a ? p : a+1,theta, phoograd);
     }
 
     virtual double getphi(int a, int b, int p, const vector<double>& theta)
     {
-        return getphi(a,b,p,theta, phoograd);
+        return phi(a,b,p,theta, phoograd);
     }
 
     virtual double gettheta(int a, int b, int p, const vector<double>& theta)
@@ -128,16 +164,16 @@ public:
 
     double getlambda(int a,int b, int p, const vector<double>& theta)
     {
-        return getkappa(b,2*a-b,b-(p-a),theta, phoograd);
+        return kappa(b,2*a-b,b-(p-a),theta, phoograd);
     }
     double getsigma(int a, int b, int p, const vector<double>& theta)
     {
-        return getrho(b,2*a-b,b-(p-a),theta, phoograd);
+        return rho(b,2*a-b,b-(p-a),theta, phoograd);
     }
 
     virtual double getpsi(int a, int b, int p, const vector<double>& theta)
     {
-        return getphi(a,2*a-b,b-(p-a),theta, phoograd);
+        return phi(a,2*a-b,b-(p-a),theta, phoograd);
     }
 
     virtual double getvartheta(int a, int b, int p, const vector<double>& theta)
@@ -190,8 +226,10 @@ public:
     }
 
     vector<paraminfo>& getparams() { return params; };
-    zimodel(int anumpars)
-      : params(anumpars), phoograd(anumpars)
+    zimodel(int anumpars, bool aphipar)
+      : params(anumpars),
+        phipar(aphipar),
+        phoograd(anumpars)
     {}
     virtual ~zimodel() {}
 };
@@ -265,10 +303,10 @@ protected:
         }
     }
 
-    ziextmodel(int anumpars, bool aisnu, bool aisgamma,
+    ziextmodel(int anumpars, bool aphipar, bool aisnu, bool aisgamma,
               bool aiseta, bool aiszeta)
       : zimodel(anumpars+(aisnu ? 1 : 0)+(aisgamma ? 1 : 0)
-                      +(aiseta ? 1 : 0) + (aiszeta ? 1 : 0)),
+                      +(aiseta ? 1 : 0) + (aiszeta ? 1 : 0), aphipar),
         isnu(aisnu), isgamma(aisgamma), iseta(aiseta), iszeta(aiszeta)
     {
         int i=anumpars;
@@ -389,6 +427,7 @@ public:
     bool twodimestimation;
     bool extendedlogging;
     bool extendedoutput;
+    bool phipar;
     bool includenu;
     bool includegamma;
     bool includeeta;
@@ -408,7 +447,6 @@ protected:
     int* ajumps;
 	int N;
 	int Noff;
-
 
     // filled by onenepair
     int mina;
@@ -465,6 +503,7 @@ public:
 		  twodimestimation(true),
 		  extendedlogging(false),
 		  extendedoutput(false),
+		  phipar(true),
 		  includenu(false),
 		  includegamma(false),
 		  includeeta(false),
@@ -495,7 +534,6 @@ public:
           string& failmsg);
     double evaluate(zimodel* modelused, const vector<paramresult>& pars,
                                                     int from, int len, double avgdaplus);
-
 };
 
 class zimleestimator : public aqestimator, public mle
@@ -578,7 +616,7 @@ public:
 
 
 
-    virtual double getphi(int a, int b, int p,
+     double getkappaorphi(int a, int b, int p,
              const vector<double>& theta, vector<double>& g)
     {
         for(unsigned int j=0; j<g.size(); j++)
@@ -594,15 +632,33 @@ public:
         return theta[i-1];
     };
 
-    zinparmodel(int an, bool aisnu, bool aisgamma, bool aiseta, bool aiszeta) :
-       ziextmodel(2*an, aisnu, aisgamma, aiseta, aiszeta), n(an)
+    virtual double getphi(int a, int b, int p,
+             const vector<double>& theta, vector<double>& g)
+    {
+        if(!phipar)
+            throw logic_error("getphi called");
+        return getkappaorphi(a, b, p,theta, g);
+    }
+
+    virtual double getkappa(int a, int b, int p,
+             const vector<double>& theta, vector<double>& g)
+    {
+        if(phipar)
+            throw logic_error("getkappa called");
+        return getkappaorphi(a, b, p,theta, g);
+    }
+
+
+    zinparmodel(int an, bool aphipar, bool aisnu, bool aisgamma,
+                                         bool aiseta, bool aiszeta) :
+       ziextmodel(2*an, aphipar, aisnu, aisgamma, aiseta, aiszeta), n(an)
     {
 
         for(int i=0; i<n; i++)
         {
             ostringstream str;
             str << i;
-            params[i].name = "\\phi_" + str.str();
+            params[i].name = (aphipar ? "\\phi_" : "\\kappa_") + str.str();
             params[i].initial = 2;
             params[i].lower = 0.00001;
             params[n+i].name = "\\rho_" + str.str();
@@ -620,8 +676,8 @@ class zinptmodel : public ziextmodel
 public:
     int getn() { return n; }
 
-    int firstphi() { return 0; }
-    int alphaphi() { return n; }
+    int firstkappaorphi() { return 0; }
+    int alphakappaorphi() { return n; }
     int firstrho() { return n+1; }
     int alpharho() { return 2*n+1; }
     virtual string getname()
@@ -659,7 +715,7 @@ public:
             return rho;
         }
     };
-    virtual double getphi(int a,int b, int p,
+    virtual double getkappaorphi(int a,int b, int p,
              const vector<double>& theta, vector<double>& g)
     {
         for(unsigned int j=0; j<g.size(); j++)
@@ -670,40 +726,58 @@ public:
            i=1;
         if(i<=n)
         {
-            g[firstphi()+i-1] = 1;
-            return theta[firstphi()+i-1];
+            g[firstkappaorphi()+i-1] = 1;
+            return theta[firstkappaorphi()+i-1];
         }
         else
         {
-            double k = theta[firstphi()+n-1];
-            double alpha = theta[alphaphi()];
+            double k = theta[firstkappaorphi()+n-1];
+            double alpha = theta[alphakappaorphi()];
             double pw = pow(i-n+1,alpha);
             double phi = k * pw;
-            g[firstphi()+n-1] = pw;
-            g[alphaphi()] = phi * log(i-n+1);
+            g[firstkappaorphi()+n-1] = pw;
+            g[alphakappaorphi()] = phi * log(i-n+1);
             return phi;
         }
     };
 
 
-    zinptmodel(int an, bool aisnu, bool aisgamma, bool aiseta, bool aiszeta) :
-       ziextmodel(2*an+2,  aisnu, aisgamma, aiseta, aiszeta), n(an)
+    virtual double getphi(int a, int b, int p,
+             const vector<double>& theta, vector<double>& g)
     {
+        if(!phipar)
+            throw logic_error("getphi called");
+        return getkappaorphi(a, b, p,theta, g);
+    }
 
+    virtual double getkappa(int a, int b, int p,
+             const vector<double>& theta, vector<double>& g)
+    {
+        if(phipar)
+            throw logic_error("getkappa called");
+        return getkappaorphi(a, b, p,theta, g);
+    }
+
+
+    zinptmodel(int an, bool aphipar, bool aisnu, bool aisgamma, bool aiseta, bool aiszeta) :
+       ziextmodel(2*an+2, aphipar, aisnu, aisgamma, aiseta, aiszeta), n(an)
+    {
         for(int i=0; i<n; i++)
         {
             ostringstream str;
             str << i;
-            params[firstphi()+i].name = "\\phi_" + str.str();
-            params[firstphi()+i].initial = 2;
-            params[firstphi()+i].lower = 0.00001;
+            params[firstkappaorphi()+i].name =
+                (aphipar ? "\\phi_" : "\\kappa_") + str.str();
+            params[firstkappaorphi()+i].initial = 2;
+            params[firstkappaorphi()+i].lower = 0.00001;
             params[firstrho()+i].name = "\\rho_" + str.str();
             params[firstrho()+i].initial = 1;
             params[firstrho()+i].lower = 0.00001;
         }
-        params[alphaphi()].name = "\\alpha_\\phi";
-        params[alphaphi()].initial = 0;
-        params[alphaphi()].upper = 0;
+        params[alphakappaorphi()].name
+         = aphipar ? "\\alpha_\\phi" : "\\alpha_\\kappa";
+        params[alphakappaorphi()].initial = 0;
+        params[alphakappaorphi()].upper = 0;
         params[alpharho()].name = "\\alpha_\\rho";
         params[alpharho()].initial = 0;
         params[alpharho()].upper = 0;
