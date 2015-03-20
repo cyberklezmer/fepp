@@ -132,13 +132,21 @@ public:
 
 struct hfdrecord
 {
+	/// time since start of the day
 	double t;
+    /// bid (in cents)
 	int b;
+	/// ask (in cents)
 	int a;
+	/// volume at bid (in pieces)
 	int bn;
+	/// volume at ask (in pieces)
 	int an;
+	/// volume of a trade (if the record corresponds to a trade), negative if it is a purchase (reaction to a sell order)
 	int q;
+	/// price of a trade
 	int p;
+	/// time of the trade
 	double qt;
 	hfdrecord(): t(0), b(0),a(0),bn(0),an(0),q(0), p(0), qt(0) {}
 	hfdrecord(double at, int ab, int aa, int abn, int aan):
