@@ -25,7 +25,7 @@
 
 #include <stdlib.h>
 #include <math.h>
-#include "/home/martin/tmp/nlopt/config.h"
+#include "config.h"
 
 #include "nlopt.h"
 
