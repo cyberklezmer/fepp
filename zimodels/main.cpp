@@ -68,6 +68,12 @@ int main(int argc, char ** argv)
             case 'G':
                 todo = 21;
                 break;
+            case 'n':
+                todo = 12;
+                break;
+            case 'N':
+                todo = 22;
+                break;
 
             default:
                 todo = -1;
@@ -126,6 +132,23 @@ int main(int argc, char ** argv)
         return 1;
     }
 
+    ostringstream name;
+    bool less = argv[1][1]=='-';
+    if(todo >= 10)
+    {
+        if(less)
+            name << "1000";
+        else
+            name << "5000";
+        if(todo < 20)
+            name << "kappa";
+        else
+            name << "phi";
+        if(onestock)
+            name << argv[3];
+        if(onemarket)
+            name << argv[4];
+    }
 
 	switch(todo)
 	{
@@ -144,11 +167,11 @@ int main(int argc, char ** argv)
             pgm.process();
         }
         break;
-		case 10:
+        case 10:
 		case 20:
         {
-            const char* name= todo==10 ? "g5000kappa" : "g5000phi";
-            zianalysis e(name);
+            name << "z";
+            zianalysis e(name.str());
             e.phipar = todo==10 ? false: true;
 
             e.modeltype = zianalysis::tail;
@@ -158,10 +181,11 @@ int main(int argc, char ** argv)
             e.includegamma = false;
             e.includezeta = false;
             e.includeeta = false;
-            e.setsample(5000,false);
+            e.setsample(less ? 1000 : 5000,false);
             e.resample = false;
             e.firstn = 1;
-            e.maxn = 3;
+            e.maxn = less ? 2 : 3;
+
             e.twodimestimation = true;
             e.extendedlogging = false;
 
@@ -169,11 +193,12 @@ int main(int argc, char ** argv)
             pgm.process();
             return 0;
         }
+
 		case 11:
 		case 21:
 		{
-            const char* name= todo==11 ? "g5000kappa" : "g5000phi";
-            zianalysis e(name);
+            name << "g";
+            zianalysis e(name.str());
             e.phipar = todo==11 ? false: true;
             e.modeltype = zianalysis::tail;
             e.maxmletime = 2500;
@@ -182,9 +207,9 @@ int main(int argc, char ** argv)
             e.includegamma = false;
             e.includezeta = false;
             e.includeeta = true;
-            e.setsample(5000,true);
+            e.setsample(less ? 1000 : 5000,true);
             e.firstn = 1;
-            e.maxn = 3;
+            e.maxn = less ? 2 : 3;
             e.twodimestimation = true;
             e.extendedlogging = false;
 
@@ -192,6 +217,31 @@ int main(int argc, char ** argv)
             pgm.process();
             return 0;
 		}
+		case 12:
+		case 22:
+        {
+            name << "n";
+            zianalysis e(name.str());
+            e.phipar = todo==12 ? false: true;
+
+            e.modeltype = zianalysis::tail;
+            e.maxmletime = 2500;
+            e.unitvolume = true;
+            e.includenu = false;
+            e.includegamma = false;
+            e.includezeta = false;
+            e.includeeta = false;
+            e.setsample(less ? 1000 : 5000,true);
+            e.resample = false;
+            e.firstn = 1;
+            e.maxn = less ? 2 : 3;
+            e.twodimestimation = true;
+            e.extendedlogging = true;
+
+            program pgm(pairs,e,start,end);
+            pgm.process();
+            return 0;
+        }
 
 		break;
 	}
