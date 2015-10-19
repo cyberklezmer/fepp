@@ -21,15 +21,15 @@ int cdasimulator::getpoisson(double lambda)
 {
     if(lambda == 0)
         return 0;
-    poisson_distribution<int> pdist(lambda);
-    variate_generator< mt19937&, poisson_distribution<int> > rvt(gen, pdist);
+    boost::poisson_distribution<int> pdist(lambda);
+    boost::variate_generator< boost::mt19937&, boost::poisson_distribution<int> > rvt(gen, pdist);
     return rvt();
 }
 
 int cdasimulator::getbi(int n, double p)
 {
-    binomial_distribution<int> pdist(n,p);
-    variate_generator< mt19937&, binomial_distribution<int> > rvt(gen, pdist);
+    boost::binomial_distribution<int> pdist(n,p);
+    boost::variate_generator< boost::mt19937&, boost::binomial_distribution<int> > rvt(gen, pdist);
     return rvt();
 }
 
@@ -90,11 +90,11 @@ void cdasimulator::simulate(int an, zirec* az, int& resnum)
             p[j] /= sint;
 
 
-        exponential_distribution<double> edist(sint);
-        variate_generator< mt19937&, exponential_distribution<double> > egen(gen, edist);
+        boost::exponential_distribution<double> edist(sint);
+        boost::variate_generator< boost::mt19937&, boost::exponential_distribution<double> > egen(gen, edist);
 
         boost::random::discrete_distribution<int> dist(p);
-        variate_generator< mt19937&, discrete_distribution<int> > vgen(gen, dist);
+        boost::variate_generator< boost::mt19937&, boost::random::discrete_distribution<int> > vgen(gen, dist);
         int v = vgen();
         double c = egen();
         int outs = 0; // signalizes a jump out of the spread
@@ -236,5 +236,4 @@ void cdasimulator::simulate(int an, zirec* az, int& resnum)
     cout << z << " obtained." << endl;
     resnum = z;
 }
-
 

@@ -608,8 +608,8 @@ public:
 private:
 	double inter;
 
-	static const double notime = 0;
-	static const double noprice = -1;
+	static constexpr double notime = 0;
+	static constexpr double noprice = -1;
 
 	double lasttime; // cas posledniho snimku
 	/// snapshot of the price, excluding price movements after trades

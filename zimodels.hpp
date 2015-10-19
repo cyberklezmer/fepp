@@ -790,7 +790,7 @@ class cdasimulator
 {
     zimodel& model;
     int N;
-    mt19937 gen;
+    boost::mt19937 gen;
     int warmupn;
 public:
     int getpoisson(double lambda);
