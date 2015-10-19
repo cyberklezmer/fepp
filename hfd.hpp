@@ -552,6 +552,16 @@ protected:
 
 };
 
+class tickdatatwimporter : public tickdataimporter
+{
+	string folder;
+public:
+	tickdatatwimporter(date astart, date aend, smpairs& apairs, datatype atype, string& afolder):
+		tickdataimporter(astart, aend, apairs, atype), folder(afolder) {}
+protected:
+	void importstock(string& stock, vector<string>& markets, vector<char>& marketids);
+};
+
 class tickdata09importer : public tickdataimporter
 {
 	string folder;
@@ -684,6 +694,14 @@ public:
 
 
 class importer09
+{
+public:
+    static void  import(const char** stocks, const char** markets,
+            date& start, date& end, string& folder);
+};
+
+
+class importertw
 {
 public:
     static void  import(const char** stocks, const char** markets,

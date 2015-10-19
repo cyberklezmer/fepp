@@ -32,9 +32,23 @@ int main(int argc, char ** argv)
 
 	const char *ss[] =
 	{
+ //"JCOM",
+         "MKTX",
+        "JCOM",
+        "PNY",
+        "ACU",
+        "ARL",
+        "FCCY",
+ 0,
         "XOM",
         "MSFT",
         "GE",
+        "MKTX",
+        "JCOM",
+        "PNY",
+        "ACU",
+        "ARL",
+        "FCCY",
         0
     };
 
@@ -97,8 +111,9 @@ int main(int argc, char ** argv)
     if(todo == 0)
     {
         string folder = argv[3];
-        importer09::import(ss,ms,start,end,folder);
-        return 0;
+ //       importer09::import(ss,ms,start,end,folder);
+        importertw::import(ss,ms,start,end,folder);
+          return 0;
     }
 
     vector<smpair> pairs;
@@ -173,7 +188,7 @@ int main(int argc, char ** argv)
 		case 21:
 		{
             const char* name= todo==11 ? "g5000kappa" : "g5000phi";
-            zianalysis e(name);
+           sudo zianalysis e(name);
             e.phipar = todo==11 ? false: true;
             e.modeltype = zianalysis::tail;
             e.maxmletime = 2500;

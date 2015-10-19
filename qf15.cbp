@@ -11,11 +11,12 @@
 				<Option object_output="obj/Debug/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
-				<Option parameters="G /home/martin XOM CBOE" />
+				<Option parameters="I /home/martin /home/martin/data" />
 				<Option projectLinkerOptionsRelation="2" />
 				<Option projectIncludeDirsRelation="2" />
 				<Option projectLibDirsRelation="2" />
 				<Compiler>
+					<Add option="-std=c++98" />
 					<Add option="-g" />
 					<Add directory="./" />
 					<Add directory="/user/local/include/" />
@@ -42,11 +43,13 @@
 		<Unit filename="src/data.cpp" />
 		<Unit filename="src/hfd.cpp" />
 		<Unit filename="src/importer09.cpp" />
+		<Unit filename="src/importertw.cpp" />
 		<Unit filename="src/interval.cpp" />
 		<Unit filename="src/program.cpp" />
 		<Unit filename="src/tbtexporter.cpp" />
 		<Unit filename="src/tickdata09importer.cpp" />
 		<Unit filename="src/tickdataimporter.cpp" />
+		<Unit filename="src/twimporter.cpp" />
 		<Unit filename="zimodels.hpp" />
 		<Unit filename="zimodels/analysis.cpp" />
 		<Unit filename="zimodels/estimator.cpp" />
