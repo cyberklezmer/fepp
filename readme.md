@@ -4,7 +4,7 @@
 
 > *Martin Smid. Econometrics of Zero Intelligence Models by Means of L1 Data. submitted to Quantitative Finance, 2015.* 
 
-This file contains an information how to install the package and replicate results from the paper. 
+This file contains an information how to install the package and replicate results from the paper. The also package implements sdome extra functiononality, which should be clear from commments or a self-documenting code.
 
 ##  Prerequisities
 
@@ -44,14 +44,23 @@ where *`hfdroot`* is the folder in which `hfd` finds itself. Notice, that the fi
 
 ### Replication of the paper's results
 
-To replicate `Appendix C1`, use
+To replicate `Appendix C1` with *N=5000*, use
 
 > `qf15 z` *`hfdroot`*
 
-To replicate `Appendix C2`, use
+To replicate `Appendix C2` with *N=5000*, use
 
 > `qf15 g` *`hfdroot`*
 
+To replicate `Appendix C3` with *N=5000*, use
+
+> `qf15 n` *`hfdroot`*
+
+To replicate the results with *N=1000* run
+
+> `qf15` *`o`*`-` *`hfdroot`* *`stock`* *`market`*
+
+where *`o`* is either `z`, `g`, `n` and where spaces in market names are replaced by underbars.
 
 ## Data strucure
 
@@ -70,3 +79,7 @@ which is a csv file without heading where each line has a structure
 
 where *`datatype`* may be presently equal only to `1`. For rescords for each stock-market pair must be stored time ascending way.
  
+
+
+
+

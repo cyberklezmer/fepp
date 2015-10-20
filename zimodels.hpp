@@ -421,17 +421,36 @@ public:
     emodeltype modeltype;
     int firstn;
     int maxn;
+    ///  in sconds
     double warmuptime;
+    /// if true then market order sizes are neglected
     bool unitvolume;
+    /// if true then the "true" model is sampled from and results are reestimated and evaluated
+    /// works only with unitvolume = 1
     bool resample;
+    /// if false then the estimation neglects $q_{[i]}$ (usesd only density of jumps)
     bool twodimestimation;
+    /// iterations of optimization are displayed
     bool extendedlogging;
+    /// all models are evaluated
     bool extendedoutput;
+    /// phi:=kappa/rho is used as a parameter instead of kappa
     bool phipar;
+    /// if true then ``typical size'' an order $\nu$ is assumed
+    /// and estimated (usage with \p twodimestimation=true causes
+    /// a multicolinearity).
     bool includenu;
+    /// if true then, when $a$ jmps down, order submission with $Po(\gamma)$
+    /// is assumed at each tick between the old and new value of $a$
     bool includegamma;
+    /// if true then parameter $\eta$ (see GZI) is assumed to be non-unit
+    /// and estimated
     bool includeeta;
+    /// deprecated
     bool includezeta;
+    /// pairs with small average increments of a are not estimated
+    bool neglectsmallaplus;
+    /// time limit of optimizaion (in sec)
 	double maxmletime;
 protected:
 	bool onlytrades;
@@ -484,7 +503,7 @@ public:
         kpiszero = r.firstinday;
         return kpiszero || r.a >= p;
     }
-
+    /// sets a sample size and type
     void setsample(int samplesize, bool aonlytrades)
     {
     	maxajumps = samplesize * (offsampleratio +1 ) / offsampleratio;
@@ -508,6 +527,7 @@ public:
 		  includegamma(false),
 		  includeeta(false),
 		  includezeta(false),
+		  neglectsmallaplus(false),
 	      maxmletime(10*60),
 		  qchanges(0),
 		  ajumps(0)

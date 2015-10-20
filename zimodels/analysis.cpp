@@ -31,6 +31,14 @@ void zianalysis::onstartpair(smpair& togo)
     ss = 0;
     nss = 0;
 
+    csv << "t,"
+        << "a,"
+        << "b,"
+        << "q,"
+        << "s,"
+        << "m,"
+        << "firstinday"
+        << endl;
 }
 
 void zianalysis::onrecord(hfdrecord& rec, int recn)
@@ -113,6 +121,15 @@ void zianalysis::onrecord(hfdrecord& rec, int recn)
                             sda += da;
                             nsda++;
                             ajumps[sp++] = M;
+                            csv << r.t << ","
+                                << r.a << ","
+                                << r.b << ","
+                                << r.q << ","
+                                << r.s << ","
+                                << r.m << ","
+                                << r.firstinday
+                                << "," << sp
+                                << endl;
                         }
                         if(r.s > 0)
                         {
@@ -152,17 +169,6 @@ void zianalysis::estimate(zimodel& model, vector<paramresult>& res,
     e.setmaxtime(maxmletime);
     e.setlogging(extendedlogging ? object::extendedlogging :
                  object::basiclogging);
-
-    if(0)
-    {
-        vector<double> pars(2);
-        vector<double> g(2);
-        pars[0] = 2.09518;
-        pars[1] = 0.0984748;
-        e.setparameters(pars);
-        e.testgrads(274,5);
-        throw;
-    }
 
     failed = false;
     emsg = "";
@@ -319,7 +325,7 @@ double zianalysis::evaluate(zimodel* modelused, const vector<paramresult>& res,
             for(unsigned int k=0; k<smpl.size(); k++)
                 MAT += fabs(smpl[k]-avg);
 
-            double P1 = 1 - MAE / MAT;
+            double P1 = MAE == MAT ? 0 : 1 - MAE / MAT;
             cout << "P1=" << P1 << " P2=" << P2 << endl;
             //latex << "$\\bar a=" << S/(double) nobs << "$," << endl;
 
@@ -367,244 +373,254 @@ void zianalysis::onendpair(smpair& togo)
 
     double avgdaplus = nsda ? sda / nsda : 0;
     latex << "$\\overline{a}^+=" << avgdaplus
-          << "$, $\\overline q=" << (nss ? ss / nss : 0)
-          << "$\\\\" << endl << endl << "\\smallskip" << endl;
+          << "$";
 
-    vector<paramresult> result;
-    double loglik = -HUGE_VAL;
-    zimodel* modelused = 0;
-    int nofmodelused = 0;
-    bool tailmodelused;
-    bool anysignificant = false;
+    if(!unitvolume)
+        latex << ", $\\overline q=" << (nss ? ss / nss : 0) << "$";
 
-    cout << "Onlytrades = " << onlytrades << ", unitvolume = " << unitvolume
-         << endl;
-
-    int n=firstn;
-    for(;;)
+    latex << "\\\\" << endl << endl << "\\smallskip" << endl;
+    if(neglectsmallaplus && avgdaplus < 1.003)
     {
-        cout << "Estimating: n=" << n <<  endl;
+        latex << "$\\overline{a}^+$ too small" << endl;
+    }
+    else
+    {
+        vector<paramresult> result;
+        double loglik = -HUGE_VAL;
+        zimodel* modelused = 0;
+        int nofmodelused = 0;
+        bool tailmodelused;
+        bool anysignificant = false;
 
-        zimodel* model=0;
-        try
+        cout << "Onlytrades = " << onlytrades << ", unitvolume = " << unitvolume
+             << endl;
+
+        int n=firstn;
+        for(;;)
         {
-            switch(modeltype)
+            cout << "Estimating: n=" << n <<  endl;
+
+            zimodel* model=0;
+            try
             {
-            case individual:
-                model = new zinparmodel(n,phipar, includenu,includegamma,
-                                        includeeta, includezeta);
-                break;
-            case tail:
-                if(n==1)
+                switch(modeltype)
+                {
+                case individual:
                     model = new zinparmodel(n,phipar, includenu,includegamma,
                                             includeeta, includezeta);
+                    break;
+                case tail:
+                    if(n==1)
+                        model = new zinparmodel(n,phipar, includenu,includegamma,
+                                                includeeta, includezeta);
+                    else
+                    {
+                        zinptmodel* npmod;
+                        model = npmod = new zinptmodel(n-1,phipar,includenu,includegamma,
+                                                       includeeta, includezeta);
+                        if(modelused)
+                        {
+                            zinptmodel* mod = (zinptmodel*) modelused;
+                            vector<double> p(model->getparams().size());
+                            for(unsigned int i=0; i<p.size(); i++)
+                                p[i] = model->getparams()[i].initial;
+                            if(nofmodelused==1)
+                            {
+                                for(int k=0; k<npmod->getn(); k++)
+                                {
+                                    p[npmod->firstkappaorphi()+k] = result[0].value;
+                                    p[npmod->firstrho()+k] = result[1].value;
+                                }
+                            }
+                            else
+                            {
+                                int m=0;
+                                for(; m<nofmodelused-1; m++)
+                                    p[npmod->firstkappaorphi()+m]
+                                        = result[mod->firstkappaorphi()+m].value;
+                                p[npmod->firstkappaorphi()+m]
+                                    = result[mod->firstkappaorphi()+m-1].value;
+                                int k=0;
+                                for(; k<nofmodelused-1; k++)
+                                    p[npmod->firstrho()+k]
+                                        = result[mod->firstkappaorphi()+k].value;
+                                p[npmod->firstkappaorphi()+k]
+                                    = result[mod->firstkappaorphi()+k-1].value;
+                                p[npmod->alphakappaorphi()]
+                                    = result[mod->alphakappaorphi()].value;
+                                p[npmod->alpharho()]
+                                    = result[mod->alpharho()].value;
+                            }
+                            model->setinitparams(p);
+                        }
+                    }
+                    break;
+                }
+
+                double ll;
+                bool failed;
+                bool significant;
+                vector<paramresult> r;
+                string emsg;
+                estimate(*model, r, true, failed, significant, ll, emsg);
+
+                if(extendedoutput)
+                    latex << model->getname();
+                if(failed)
+                {
+                    latex << ": " << emsg << "\\\\" << endl;
+                    delete model;
+                    model = 0;
+                    ll = loglik;
+                }
                 else
                 {
-                    zinptmodel* npmod;
-                    model = npmod = new zinptmodel(n-1,phipar,includenu,includegamma,
-                                                   includeeta, includezeta);
-                    if(modelused)
+                    if(significant)
+                        anysignificant = true;
+                    if(n==1 || extendedoutput)
                     {
-                        zinptmodel* mod = (zinptmodel*) modelused;
-                        vector<double> p(model->getparams().size());
-                        for(unsigned int i=0; i<p.size(); i++)
-                            p[i] = model->getparams()[i].initial;
-                        if(nofmodelused==1)
+                        if(significant)
                         {
-                            for(int k=0; k<npmod->getn(); k++)
-                            {
-                                p[npmod->firstkappaorphi()+k] = result[0].value;
-                                p[npmod->firstrho()+k] = result[1].value;
-                            }
+                            latex << "$P_0="
+                                << evaluate(model,r, N, Noff, avgdaplus)
+                                << "$ ";
                         }
-                        else
-                        {
-                            int m=0;
-                            for(; m<nofmodelused-1; m++)
-                                p[npmod->firstkappaorphi()+m]
-                                    = result[mod->firstkappaorphi()+m].value;
-                            p[npmod->firstkappaorphi()+m]
-                                = result[mod->firstkappaorphi()+m-1].value;
-                            int k=0;
-                            for(; k<nofmodelused-1; k++)
-                                p[npmod->firstrho()+k]
-                                    = result[mod->firstkappaorphi()+k].value;
-                            p[npmod->firstkappaorphi()+k]
-                                = result[mod->firstkappaorphi()+k-1].value;
-                            p[npmod->alphakappaorphi()]
-                                = result[mod->alphakappaorphi()].value;
-                            p[npmod->alpharho()]
-                                = result[mod->alpharho()].value;
-                        }
-                        model->setinitparams(p);
                     }
                 }
-                break;
-            }
+                double ratio = 2*(ll-loglik);
+                cout << "ratio=" << ratio << endl;
 
-            double ll;
-            bool failed;
-            bool significant;
-            vector<paramresult> r;
-            string emsg;
-            estimate(*model, r, true, failed, significant, ll, emsg);
-
-            if(extendedoutput)
-                latex << model->getname();
-            if(failed)
-            {
-                latex << ": " << emsg << "\\\\" << endl;
-                delete model;
-                model = 0;
-                ll = loglik;
-            }
-            else
-            {
-                if(significant)
-                    anysignificant = true;
-                if(n==1 || extendedoutput)
+                if(ratio < 5.991)// 3.841
+                {
+                    if(modelused == 0)
+                        throw runtime_error("internal error: ratio of first model");
+                    else
+                    {
+                        delete model;
+                        break;
+                    }
+                }
+                else
                 {
                     if(significant)
                     {
-                        latex << "$P_0="
-                            << evaluate(model,r, N, Noff, avgdaplus)
-                            << "$ ";
+                        result = r;
+                        loglik = ll;
+                        if(modelused)
+                            delete modelused;
+                        modelused = model;
+                        nofmodelused = n;
+                        tailmodelused = n>1 ? true : false;
+                    }
+                    if(anysignificant && !significant)
+                        break;
+                    if(n==maxn)
+                        break;
+                    else
+                        n++;
+                }
+                loglik = ll;
+            }
+            catch(...)
+            {
+                if(model)
+                    delete model;
+                throw;
+            }
+        }
+
+    //    cout << "Evaluating" << endl;
+
+    //    evaluate(modelused, result);
+
+        if(modelused)
+        {
+            if(!extendedoutput && tailmodelused)
+            {
+                cout << "Evaluating..." << endl;
+                if(tailmodelused)
+                {
+                    if(avgdaplus < 1.02 && !onlytrades)
+                        latex << ", $P_=n/a$" << endl;
+                    else
+                        latex << "$P="
+                          << evaluate(modelused,result, N, Noff, avgdaplus)
+                          << "$" << endl;
+                }
+            }
+            if(resample)
+            {
+                vector<double> pars(result.size());
+                cout << "Simulating pars: ";
+                for(unsigned int k=0; k<result.size(); k++)
+                {
+                    pars[k] = result[k].value;
+                    cout << pars[k] << " ";
+                }
+                cout << endl;
+
+                modelused->setinitparams(pars);
+
+                int resnum;
+                cdasimulator s(*modelused,Noff*10,Noff);
+                s.simulate(Noff,qchanges,resnum);
+                int m=0;
+                for(int i=0; i<resnum; i++)
+                {
+                    zirec& r = qchanges[i];
+                    if( !r.firstinday && r.a != qchanges[i-1].a )
+                    {
+                       r.m = r.s - qchanges[M-1].q;
+                       r.m = r.m >= 0 ? r.m : 0;
+                       int da = r.a-qchanges[M-1].a;
+                       if(da > 0)
+                       {
+                          ajumps[m++] = i;
+                          if(m == Noff)
+                            break;
+                       }
                     }
                 }
-            }
-            double ratio = 2*(ll-loglik);
-            cout << "ratio=" << ratio << endl;
 
-            if(ratio < 5.991)// 3.841
+                cout << "maxqchanges=" << maxqchanges << " successfully got="
+                    << resnum << endl;
+                latex << ", $P_{\\mathrm{sim}}="
+                    << evaluate(modelused,result, 0, m, 0)
+                    << "$";
+            }
+
+            cout << "Writing latex..." << endl;
+            latex << "\\\\" << endl << endl
+                  << " \\smallskip" << endl;
+
+            if(extendedoutput)
+                latex << modelused->getname() << "\\\\" << endl;
+
+            for(unsigned int i=0; i< result.size(); i++)
             {
-                if(modelused == 0)
-                    throw runtime_error("internal error: ratio of first model");
-                else
-                {
-                    delete model;
-                    break;
-                }
+                latex.precision(4);
+                result[i].output(latex,true);
+                //            if((i%2))
+                latex << "\\\\" ;
             }
-            else
-            {
-                if(significant)
-                {
-                    result = r;
-                    loglik = ll;
-                    if(modelused)
-                        delete modelused;
-                    modelused = model;
-                    nofmodelused = n;
-                    tailmodelused = n>1 ? true : false;
-                }
-                if(anysignificant && !significant)
-                    break;
-                if(n==maxn)
-                    break;
-                else
-                    n++;
-            }
-            loglik = ll;
-        }
-        catch(...)
-        {
-            if(model)
-                delete model;
-            throw;
-        }
-    }
-
-//    cout << "Evaluating" << endl;
-
-//    evaluate(modelused, result);
-
-    if(modelused)
-    {
-        if(!extendedoutput && tailmodelused)
-        {
-            cout << "Evaluating..." << endl;
-            if(tailmodelused)
-            {
-                if(avgdaplus < 1.02 && !onlytrades)
-                    latex << ", $P_=n/a$" << endl;
-                else
-                    latex << "$P="
-                      << evaluate(modelused,result, N, Noff, avgdaplus)
-                      << "$" << endl;
-            }
-        }
-        if(resample)
-        {
-            vector<double> pars(result.size());
-            cout << "Simulating pars: ";
-            for(unsigned int k=0; k<result.size(); k++)
-            {
-                pars[k] = result[k].value;
-                cout << pars[k] << " ";
-            }
-            cout << endl;
-
-            modelused->setinitparams(pars);
-
-            int resnum;
-            cdasimulator s(*modelused,Noff*10,Noff);
-            s.simulate(Noff,qchanges,resnum);
-            int m=0;
-            for(int i=0; i<resnum; i++)
-            {
-                zirec& r = qchanges[i];
-                if( !r.firstinday && r.a != qchanges[i-1].a )
-                {
-                   r.m = r.s - qchanges[M-1].q;
-                   r.m = r.m >= 0 ? r.m : 0;
-                   int da = r.a-qchanges[M-1].a;
-                   if(da > 0)
-                   {
-                      ajumps[m++] = i;
-                      if(m == Noff)
-                        break;
-                   }
-                }
-            }
-
-            cout << "maxqchanges=" << maxqchanges << " successfully got="
-                << resnum << endl;
-            latex << ", $P_{\\mathrm{sim}}="
-                << evaluate(modelused,result, 0, m, 0)
-                << "$";
-        }
-
-        cout << "Writing latex..." << endl;
-        latex << "\\\\" << endl << endl
-              << " \\smallskip" << endl;
-
-        if(extendedoutput)
-            latex << modelused->getname() << "\\\\" << endl;
-
-        for(unsigned int i=0; i< result.size(); i++)
-        {
-            latex.precision(4);
-            result[i].output(latex,true);
-            //            if((i%2))
-            latex << "\\\\" ;
-        }
-        latex << "\\smallskip" << endl;
-        if(tailmodelused && phipar) // i.e. the model is with tails
-        {
-            zinptmodel* m = (zinptmodel*) modelused;
-            double alphak = result[m->alphakappaorphi()].value
-                              + result[m->alpharho()].value;
-            double s = sqrt(result[m->alphakappaorphi()].std
-                              + result[m->alpharho()].std);
-            latex << endl << "\\smallskip" << endl << endl
-                  << "$\\alpha_{\\kappa}=" << alphak
-                  << "(" << s << ")^{"
-                  << paramresult::stars(alphak/s)
-                  << "}$\\\\"<< endl;
             latex << "\\smallskip" << endl;
-        }
+            if(tailmodelused && phipar) // i.e. the model is with tails
+            {
+                zinptmodel* m = (zinptmodel*) modelused;
+                double alphak = result[m->alphakappaorphi()].value
+                                  + result[m->alpharho()].value;
+                double s = sqrt(result[m->alphakappaorphi()].std
+                                  + result[m->alpharho()].std);
+                latex << endl << "\\smallskip" << endl << endl
+                      << "$\\alpha_{\\kappa}=" << alphak
+                      << "(" << s << ")^{"
+                      << paramresult::stars(alphak/s)
+                      << "}$\\\\"<< endl;
+                latex << "\\smallskip" << endl;
+            }
 
-        delete modelused;
+            delete modelused;
+        }
     }
 }
 
