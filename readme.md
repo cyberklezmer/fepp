@@ -22,11 +22,11 @@ The following conditions must be fulfilled for `qf15` to run on Linux. Running o
 
 ## Building
 
-`qf15` is built by means of `Code::Blocks`, project `qf15.cbp`. Fro the program to be built, it must be
+`qf15` is built by means of `Code::Blocks`, project `qf15.cbp`. For the program to be built, it must be
 
-1. `boost` library installed somewhere on computer, its include path added to `Build Options/Search directories/Compiler' of the project
+1. `boost` library installed somewhere on computer, its include path added to `Build Options/Compiler/Search directories' of the project
 
-2. `nlopt` library installed somewhere, its include path added to the project (as above) and a path to the library itself added to `Build Options/Search directories/Linker' of the project
+2. `nlopt` library installed somewhere, its include path added to the project (as above) and a path to the library itself added to `Build Options/Linker/Search directories' of the project
 
 The executable is then build e.g., by `Build/Build` of `Code::Blocks`.
 
@@ -40,7 +40,7 @@ The data are imported by
 
 > `qf15 I`  *`hfdroot dataroot`* 
 
-where *`hfdroot`* is the folder in which `hfd` finds itself. Notice, that the file `intex.csv` has to be empty before the import. To replecate the results from the paper, data from March and April 2009 must be present in the source folder.
+where *`hfdroot`* is the folder in which `hfd` finds itself. Notice, that the file `intex.csv` has to be empty before the import. To replicate the results from the paper, data from March and April 2009 must be present in the source folder.
 
 ### Replication of the paper's results
 

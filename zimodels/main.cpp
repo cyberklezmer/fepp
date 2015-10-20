@@ -30,30 +30,42 @@ int main(int argc, char ** argv)
 		0
     };
 
-	const char *ss[] =
-	{
- //"JCOM",
-         "MKTX",
-        "JCOM",
-        "PNY",
-        "ACU",
-        "ARL",
-        "FCCY",
- 0,
-        "XOM",
-        "MSFT",
-        "GE",
-        "MKTX",
-        "JCOM",
-        "PNY",
-        "ACU",
-        "ARL",
-        "FCCY",
-        0
+
+    const char *ms0[] =
+    {
+        "NASDAQ T",
+		0
     };
 
 
+
+	const char *ss[] =
+	{
+//        "XOM",
+//        "MSFT",
+//        "GE",
+/*         "MKTX",
+        "JCOM",
+        "PNY",
+        "ACU",
+        "ARL",
+        "FCCY",*/
+        0
+    };
+
+	const char *ss0[] =
+	{
+        "GE0",
+        "JCOM0",
+        "MSFT0",
+        "PNY0",
+        "XOM0",
+        0
+    };
+
 	int todo;
+    bool zerostocks=false;
+    bool newstocks=true;
 
     if(argc <= 2)
         todo = -1;
@@ -63,9 +75,12 @@ int main(int argc, char ** argv)
         {
             case 'I':
                 todo = 0;
+                zerostocks = newstocks = true;
                 break;
             case 'S':
                 todo = 1;
+                zerostocks = true;
+                newstocks = false;
                 break;
             case 'E':
                 todo = 2;
@@ -111,30 +126,48 @@ int main(int argc, char ** argv)
     }
 
     hfd h(argv[2]);
+
  	date start(2009,3,1);
-	date end(2009,4,30);
+	date end(2009,12,31);
+
+ 	date start0(2000,1,1);
+	date end0(2001,12,31);
 
     if(todo == 0)
     {
         string folder = argv[3];
- //       importer09::import(ss,ms,start,end,folder);
-        importertw::import(ss,ms,start,end,folder);
-          return 0;
+//       importer09::import(ss,ms,start,end,folder);
+        importertw::import(ss0,ms,start0,end0,folder);
+//        importertw::import(ss,ms,start,end,folder);
+        return 0;
     }
 
     vector<smpair> pairs;
 
-	for(int s=0; ss[s]; s++)
-		for(int m=0; ms[m]; m++)
-		{
-            if(onestock && strcmp(ss[s],argv[3]))
-                continue;
-            if(onemarket && strcmp(ms[m],argv[4]))
-                continue;
-			smpair p(ss[s],ms[m],9.5,15.5);
-			pairs.push_back(p);
-		}
-	// to do  - add other pairs
+	if(newstocks)
+        for(int s=0; ss[s]; s++)
+            for(int m=0; ms[m]; m++)
+            {
+                if(onestock && strcmp(ss[s],argv[3]))
+                    continue;
+                if(onemarket && strcmp(ms[m],argv[4]))
+                    continue;
+                smpair p(ss[s],ms[m],9.5,15.5);
+                pairs.push_back(p);
+            }
+
+    if(zerostocks)
+        for(int s=0; ss0[s]; s++)
+            for(int m=0; ms0[m]; m++)
+            {
+                if(onestock && strcmp(ss0[s],argv[3]))
+                    continue;
+                if(onemarket && strcmp(ms0[m],argv[4]))
+                    continue;
+                smpair p(ss0[s],ms0[m],9.5,15.5);
+                pairs.push_back(p);
+            }
+
 
     if(pairs.size()==0)
     {
@@ -169,8 +202,8 @@ int main(int argc, char ** argv)
 	{
 		case 1:
 		{
-			zisummary s(2008,2009);
-			program pgm(pairs,s,start,end);
+			zisummary s(2000,2001);
+			program pgm(pairs,s,start0,end0);
 			pgm.process();
 		}
 		break;
