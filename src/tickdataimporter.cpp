@@ -136,7 +136,6 @@ void tickdataimporter::importusfile(string& astock, vector<string>& markets,
 			time[2]=time[5]=0;
 			t = atof(time+6)+60.0*atoi(time+3)+3600.0*atoi(time);
 
-
 			istr.getline(exchange,4,',');
 
 			our = false;
@@ -196,7 +195,7 @@ void tickdataimporter::importusfile(string& astock, vector<string>& markets,
 							   cerr << "Wrong format of trade data" << endl;
 							   throw 1;
 						   }
-						   volumestr++;
+						   *volumestr++ = 0;
 						   char* exchange = 0;
 						   for(exchange = volumestr+1; *exchange && *exchange !=','; exchange++)
 							   ;
@@ -217,16 +216,34 @@ void tickdataimporter::importusfile(string& astock, vector<string>& markets,
 							   }
 						   if(writetrecord)
 						   {
-							   p = atof(pricestr)*knumticks + 0.5;
-							   q = atoi(volumestr) / klotsize;
+                              double d = atof(pricestr)*numticks;
+                              if(fabs(d-round(d)) < 0.0011*numticks) // is a candidate for mathcin
+                              {
 
-							   tinfo f = {tt,p,q,-1,0};
-// zakomentovaný kod slučoval trady se stejným časem
-//							   int s = ti[tm].size();
-//							   if(s > 0 && ti[tm][s-1].p == p && ti[tm][s-1].tt == tt)
-//								   ti[tm][s-1].q+=f.q;
-//							   else
-								   ti[tm].push_back(f);
+                                  p = d + 0.5;
+
+                                  int vinunits = atoi(volumestr);
+                                  if(fabs((double) (vinunits / klotsize) -
+                                       ((double) vinunits) / ((double) klotsize) ) > 0.0000001)
+                                  {
+                                    cerr << "Trade size not multiple of "
+                                         << klotsize << " tick found for trade "
+                                         << astock << "," << exchange << " at "
+                                         << tdate.y << "/" << tdate.m << "/"
+                                         << tdate.d << endl;
+                                    throw 1;
+                                  }
+
+
+                                   q =  vinunits / klotsize;
+                                   tinfo f = {tt,p,q,-1,0};
+    // zakomentovaný kod slučoval trady se stejným časem
+    //							   int s = ti[tm].size();
+    //							   if(s > 0 && ti[tm][s-1].p == p && ti[tm][s-1].tt == tt)
+    //								   ti[tm][s-1].q+=f.q;
+    //							   else
+                                       ti[tm].push_back(f);
+                                }
 						   }
 					   }
 					   tstr.getline(tradeline,sizeof(tradeline)-1);
@@ -375,8 +392,31 @@ void tickdataimporter::importusfile(string& astock, vector<string>& markets,
 			istr.getline(bidn,20,',');
 			char askn[20];
 			istr.getline(askn,20,',');
-			b = atof(bid)*knumticks + 0.5;
-			a = atof(ask)*knumticks + 0.5;
+			double db = atof(bid)*numticks;
+            if(fabs(db-round(db)) >  0.0011 * numticks)
+            {
+                cerr << "Tick of " << bid << " not matching 1/"
+                     << numticks <<" found for bid "
+                     << astock << "," << exchange << " at "
+                     << d.y << "/" << d.m << "/"
+                     << d.d << endl;
+//                throw 1;
+            }
+			b = db + 0.5;
+
+			double da = atof(ask)*numticks;
+
+            if(fabs(da-round(da)) > 0.0011 * numticks)
+            {
+                cerr << "Tick of " << ask << " not matching 1/"
+                     << numticks <<" found for ask "
+                     << astock << "," << exchange << " at "
+                     << d.y << "/" << d.m << "/"
+                     << d.d << endl;
+//                throw 1;
+            }
+
+			a = da + 0.5;
 			bn = atoi(bidn);
 			an = atoi(askn);
 

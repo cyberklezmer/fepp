@@ -31,13 +31,11 @@ int main(int argc, char ** argv)
     };
 
 
-    const char *ms0[] =
+    const char *ms16[] =
     {
         "NASDAQ T",
 		0
     };
-
-
 
 	const char *ss[] =
 	{
@@ -53,7 +51,7 @@ int main(int argc, char ** argv)
         0
     };
 
-	const char *ss0[] =
+	const char *ss16[] =
 	{
         "GE0",
         "JCOM0",
@@ -64,8 +62,6 @@ int main(int argc, char ** argv)
     };
 
 	int todo;
-    bool zerostocks=false;
-    bool newstocks=true;
 
     if(argc <= 2)
         todo = -1;
@@ -75,12 +71,9 @@ int main(int argc, char ** argv)
         {
             case 'I':
                 todo = 0;
-                zerostocks = newstocks = true;
                 break;
             case 'S':
                 todo = 1;
-                zerostocks = true;
-                newstocks = false;
                 break;
             case 'E':
                 todo = 2;
@@ -130,21 +123,59 @@ int main(int argc, char ** argv)
  	date start(2009,3,1);
 	date end(2009,12,31);
 
- 	date start0(2000,1,1);
-	date end0(2001,12,31);
+// 	date start(2009,3,1);
+//	date end(2009,12,31);
+
+
+ 	date start16(2000,1,1);
+	date end16(2001,12,31);
+
+
+ 	date start09(2001,5,1);
+	date end09(2001,12,31);
+
+
+
+    enum eperiod {s16, s00, s09};
+
+
+    eperiod period = argv[1][1]=='6' ? s16 :
+                (argv[1][1]=='0' ? s00 : s09);
+
+    switch(period)
+    {
+       case s16:
+          start = date(2000,7,1);
+          end = date(2001,2,28);
+          break;
+       case s00:
+ 	      start = date(2001,5,1);
+	      end = date(2001,12,31);
+	      break;
+       case s09:
+ 	      start = date(2009,3,1);
+	      end = date(2009,12,31);
+	      break;
+    }
 
     if(todo == 0)
     {
         string folder = argv[3];
+        if(period==s09)
+        {
 //       importer09::import(ss,ms,start,end,folder);
-        importertw::import(ss0,ms,start0,end0,folder);
-//        importertw::import(ss,ms,start,end,folder);
+           importertw::import(ss,ms,start,end,folder);
+        }
+        else
+           importertw::import(ss16,ms16,start,end,folder,true);
         return 0;
     }
 
+
     vector<smpair> pairs;
 
-	if(newstocks)
+	if(period == s09)
+	{
         for(int s=0; ss[s]; s++)
             for(int m=0; ms[m]; m++)
             {
@@ -154,20 +185,21 @@ int main(int argc, char ** argv)
                     continue;
                 smpair p(ss[s],ms[m],9.5,15.5);
                 pairs.push_back(p);
-            }
-
-    if(zerostocks)
-        for(int s=0; ss0[s]; s++)
-            for(int m=0; ms0[m]; m++)
+             }
+     }
+     else
+     {
+        for(int s=0; ss16[s]; s++)
+            for(int m=0; ms16[m]; m++)
             {
-                if(onestock && strcmp(ss0[s],argv[3]))
+                if(onestock && strcmp(ss16[s],argv[3]))
                     continue;
-                if(onemarket && strcmp(ms0[m],argv[4]))
+                if(onemarket && strcmp(ms16[m],argv[4]))
                     continue;
-                smpair p(ss0[s],ms0[m],9.5,15.5);
+                smpair p(ss16[s],ms16[m],9.5,15.5);
                 pairs.push_back(p);
             }
-
+     }
 
     if(pairs.size()==0)
     {
@@ -181,7 +213,8 @@ int main(int argc, char ** argv)
     }
 
     ostringstream name;
-    bool less = argv[1][1]=='-';
+    bool less = argv[1][1]=='-'
+           || (argv[1][1] && argv[1][2]=='-');
     if(todo >= 10)
     {
         if(less)
@@ -203,7 +236,7 @@ int main(int argc, char ** argv)
 		case 1:
 		{
 			zisummary s(2000,2001);
-			program pgm(pairs,s,start0,end0);
+			program pgm(pairs,s,start,end);
 			pgm.process();
 		}
 		break;

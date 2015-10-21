@@ -2,7 +2,7 @@
 
 
 void importertw::import(const char** stocks, const char** markets,
-        date& start, date& end, string& folder)
+        date& start, date& end, string& folder, bool tick16)
 {
     vector<smpair> pairs;
 
@@ -12,7 +12,7 @@ void importertw::import(const char** stocks, const char** markets,
             smpair p(stocks[s],markets[m],9.5,15.5);
             pairs.push_back(p);
         }
-    tickdatatwimporter i(start,end,pairs,tickdataimporter::usstock,folder);
+    tickdatatwimporter i(start,end,pairs,tickdataimporter::usstock,folder, tick16);
     i.process();
 }
 

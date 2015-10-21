@@ -534,15 +534,19 @@ public:
 	    return kmarkets[i];
 	};
 public:
-	static const int knumticks = 100;
+	int numticks;
 	static const int klotsize = 100;
 protected:
 	static string zippath() { return "7z"; }
 	datatype type;
+    bool tick16;
+
 	void import();
 	static const int maxmarketsperstock = 30;
-	tickdataimporter(date astart, date aend, smpairs& apairs, datatype atype):
-		importer(astart, aend, apairs), type(atype) {}
+	tickdataimporter(date astart, date aend, smpairs& apairs,
+	     datatype atype, bool atick16=true):
+		importer(astart, aend, apairs),
+		numticks(atick16 ? 16 : 100), type(atype) {}
 	virtual void importstock(string& stock, vector<string>& markets, vector<char>& marketids) = 0;
 
 	struct tinfo {double tt; int p; int q; int pairedwith; int type; };
@@ -556,8 +560,9 @@ class tickdatatwimporter : public tickdataimporter
 {
 	string folder;
 public:
-	tickdatatwimporter(date astart, date aend, smpairs& apairs, datatype atype, string& afolder):
-		tickdataimporter(astart, aend, apairs, atype), folder(afolder) {}
+	tickdatatwimporter(date astart, date aend, smpairs& apairs,
+	         datatype atype, string& afolder, bool tick16):
+		tickdataimporter(astart, aend, apairs, atype, tick16), folder(afolder) {}
 protected:
 	void importstock(string& stock, vector<string>& markets, vector<char>& marketids);
 };
@@ -705,7 +710,7 @@ class importertw
 {
 public:
     static void  import(const char** stocks, const char** markets,
-            date& start, date& end, string& folder);
+            date& start, date& end, string& folder, bool tick16 = false);
 };
 
 #endif /* HFD_HPP_ */
