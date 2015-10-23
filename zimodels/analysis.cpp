@@ -359,7 +359,7 @@ void zianalysis::onendpair(smpair& togo)
     Noff = sp-N;
 
     latex << "{ \\normalsize "
-          << togo.stock << " at " << togo.market
+          << togo.stock << " on " << togo.market
           << "}" << endl ;
 
     latex << "\\\\" << endl << endl << "\\smallskip" << endl;
@@ -369,7 +369,7 @@ void zianalysis::onendpair(smpair& togo)
     else
         latex << "$N=" << getN() << "$, " << endl;
 
-    csv << togo.stock << " at " << togo.market << endl;
+    csv << togo.stock << " on " << togo.market << endl;
 
     double avgdaplus = nsda ? sda / nsda : 0;
     latex << "$\\overline{a}^+=" << avgdaplus
@@ -481,7 +481,7 @@ void zianalysis::onendpair(smpair& togo)
                     {
                         if(significant)
                         {
-                            latex << "$P_0="
+                            latex << "$P_S="
                                 << evaluate(model,r, N, Noff, avgdaplus)
                                 << "$ ";
                         }
@@ -541,9 +541,9 @@ void zianalysis::onendpair(smpair& togo)
                 if(tailmodelused)
                 {
                     if(avgdaplus < 1.02 && !onlytrades)
-                        latex << ", $P_=n/a$" << endl;
+                        latex << ", $P_m=n/a$" << endl;
                     else
-                        latex << "$P="
+                        latex << "$P_m="
                           << evaluate(modelused,result, N, Noff, avgdaplus)
                           << "$" << endl;
                 }

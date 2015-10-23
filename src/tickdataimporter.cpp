@@ -231,18 +231,20 @@ void tickdataimporter::importusfile(string& astock, vector<string>& markets,
                                          << astock << "," << exchange << " at "
                                          << tdate.y << "/" << tdate.m << "/"
                                          << tdate.d << endl;
-                                    throw 1;
                                   }
+                                  else
+                                  {
 
 
-                                   q =  vinunits / klotsize;
-                                   tinfo f = {tt,p,q,-1,0};
+                                      q =  vinunits / klotsize;
+                                      tinfo f = {tt,p,q,-1,0};
     // zakomentovaný kod slučoval trady se stejným časem
     //							   int s = ti[tm].size();
     //							   if(s > 0 && ti[tm][s-1].p == p && ti[tm][s-1].tt == tt)
     //								   ti[tm][s-1].q+=f.q;
     //							   else
                                        ti[tm].push_back(f);
+                                  }
                                 }
 						   }
 					   }
@@ -356,8 +358,13 @@ void tickdataimporter::importusfile(string& astock, vector<string>& markets,
 						  remark << ", "<< numzeroquotes[i] << " zero quotes.";
 				       if(recs[i].size() >0 || ti[i].size() > 0)
 				       {
-				    	   cout << "Adding " << astock << "," << markets[i] << endl;
-				    	   addday(astock,markets[i],olddate,hfd::tradequotetick,remark.str());
+				    	   if(start <= olddate  && olddate <= end)
+				    	   {
+                               cout << "Adding " << olddate.y << "/" << olddate.m << "/"
+                                    << olddate.d << " of "
+                                    << astock << "," << markets[i] << endl;
+                               addday(astock,markets[i],olddate,hfd::tradequotetick,remark.str());
+				    	   }
 				    	   recs[i].resize(0);
 				    	   ti[i].resize(0);
 				       }
@@ -393,7 +400,8 @@ void tickdataimporter::importusfile(string& astock, vector<string>& markets,
 			char askn[20];
 			istr.getline(askn,20,',');
 			double db = atof(bid)*numticks;
-            if(fabs(db-round(db)) >  0.0011 * numticks)
+            if(fabs(db-round(db)) >  0.0011 * numticks
+               && start <= d && d <= end)
             {
                 cerr << "Tick of " << bid << " not matching 1/"
                      << numticks <<" found for bid "
@@ -406,7 +414,8 @@ void tickdataimporter::importusfile(string& astock, vector<string>& markets,
 
 			double da = atof(ask)*numticks;
 
-            if(fabs(da-round(da)) > 0.0011 * numticks)
+            if(fabs(da-round(da)) > 0.0011 * numticks
+                 && start <= d && d <= end)
             {
                 cerr << "Tick of " << ask << " not matching 1/"
                      << numticks <<" found for ask "

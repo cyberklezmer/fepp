@@ -115,7 +115,7 @@ void zisummary::onendday(int day)
 void zisummary::onendpair(smpair& togo)
 {
 	latex << "{\\normalsize " << togo.stock
-		<< " at " << togo.market << "}"
+		<< " on " << togo.market << "}"
 		<< endl << endl;
 
 	latex << "\\begin{tabular}{ccccc}" << endl

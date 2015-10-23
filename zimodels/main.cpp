@@ -42,12 +42,12 @@ int main(int argc, char ** argv)
 //        "XOM",
 //        "MSFT",
 //        "GE",
-/*         "MKTX",
+         "MKTX",
         "JCOM",
-        "PNY",
-        "ACU",
+//        "PNY",
+//        "ACU",
         "ARL",
-        "FCCY",*/
+//        "FCCY",
         0
     };
 
@@ -120,41 +120,32 @@ int main(int argc, char ** argv)
 
     hfd h(argv[2]);
 
- 	date start(2009,3,1);
-	date end(2009,12,31);
-
-// 	date start(2009,3,1);
-//	date end(2009,12,31);
-
-
- 	date start16(2000,1,1);
-	date end16(2001,12,31);
-
-
- 	date start09(2001,5,1);
-	date end09(2001,12,31);
-
-
+ 	date start;
+	date end;
 
     enum eperiod {s16, s00, s09};
 
-
     eperiod period = argv[1][1]=='6' ? s16 :
                 (argv[1][1]=='0' ? s00 : s09);
+
+    ostringstream name;
 
     switch(period)
     {
        case s16:
           start = date(2000,7,1);
           end = date(2001,2,28);
+          name << "16_";
           break;
        case s00:
  	      start = date(2001,5,1);
 	      end = date(2001,12,31);
+          name << "01_";
 	      break;
        case s09:
  	      start = date(2009,3,1);
 	      end = date(2009,12,31);
+          name << "09_";
 	      break;
     }
 
@@ -167,7 +158,7 @@ int main(int argc, char ** argv)
            importertw::import(ss,ms,start,end,folder);
         }
         else
-           importertw::import(ss16,ms16,start,end,folder,true);
+           importertw::import(ss16,ms16,start,end,folder,period == s16);
         return 0;
     }
 
@@ -212,7 +203,8 @@ int main(int argc, char ** argv)
         return 1;
     }
 
-    ostringstream name;
+
+
     bool less = argv[1][1]=='-'
            || (argv[1][1] && argv[1][2]=='-');
     if(todo >= 10)
