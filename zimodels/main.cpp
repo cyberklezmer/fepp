@@ -309,7 +309,6 @@ int main(int argc, char ** argv)
             e.firstn = 1;
             e.maxn = less ? 2 : 3;
             e.twodimestimation = true;
-            e.extendedlogging = true;
 
             program pgm(pairs,e,start,end);
             pgm.process();
